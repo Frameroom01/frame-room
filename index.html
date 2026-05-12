@@ -1,0 +1,3359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Frameroom — Real Estate Photo Editor</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg0:#0d0d0f;--bg1:#141418;--bg2:#1a1a1f;--bg3:#212128;--bg4:#292932;--bg5:#32323d;
+  --border:#ffffff09;--border2:#ffffff12;--border3:#ffffff1e;
+  --t0:#ebebf0;--t1:#8f8fa8;--t2:#4e4e64;
+  --acc:#4f8ef7;--acc2:#7c5ef7;--accg:rgba(79,142,247,0.1);
+  --grn:#38c172;--gng:rgba(56,193,114,0.1);
+  --amb:#f0a030;--amg:rgba(240,160,48,0.1);
+  --cor:#e8514a;--cog:rgba(232,81,74,0.1);
+  --pur:#9d6ef5;--tea:#2ec4b6;
+  --r:5px;--rl:9px;
+  --font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+}
+html,body{height:100%;overflow:hidden;font-family:var(--font);background:var(--bg0);color:var(--t0);font-size:12px}
+
+/* ── TOPBAR ── */
+.topbar{display:flex;align-items:center;height:42px;background:var(--bg1);border-bottom:1px solid var(--border2);padding:0 14px;gap:8px;flex-shrink:0;z-index:100}
+.logo{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;letter-spacing:-.2px;margin-right:16px}
+.logo-mark{width:22px;height:22px;background:linear-gradient(135deg,var(--acc),var(--acc2));border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px}
+.nav-pill{padding:4px 11px;border-radius:var(--r);font-size:11px;font-weight:500;color:var(--t1);cursor:pointer;transition:all .12s}
+.nav-pill:hover{color:var(--t0);background:var(--bg3)}
+.nav-pill.active{color:var(--t0);background:var(--bg3)}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.tbtn{padding:4px 11px;border-radius:var(--r);font-size:11px;font-weight:500;border:1px solid var(--border2);background:var(--bg3);color:var(--t1);cursor:pointer;font-family:var(--font);transition:all .12s}
+.tbtn:hover{background:var(--bg4);color:var(--t0)}
+.tbtn.acc{background:var(--acc);border-color:transparent;color:#fff}
+.tbtn.acc:hover{background:#3a7fe6}
+.av{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--acc),var(--acc2));display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;cursor:pointer}
+
+/* ── API BAR ── */
+.api-bar{display:flex;align-items:center;padding:7px 14px;gap:10px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0}
+.api-lbl{font-size:10.5px;color:var(--t2);white-space:nowrap}
+.api-inp{flex:1;max-width:420px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:5px 11px;font-size:11px;color:var(--t0);font-family:var(--mono);outline:none;transition:border-color .15s}
+.api-inp:focus{border-color:var(--acc)}
+.api-inp::placeholder{color:var(--t2);font-family:var(--font)}
+.api-dot{width:7px;height:7px;border-radius:50%;background:var(--bg5);transition:background .2s}
+.api-dot.ok{background:var(--grn)}
+.api-dot.err{background:var(--cor)}
+.api-txt{font-size:10.5px;color:var(--t2)}
+.api-txt.ok{color:var(--grn)}
+
+/* ── WORKSPACE ── */
+.workspace{display:flex;flex:1;overflow:hidden;height:calc(100vh - 42px - 34px)}
+
+/* ── LEFT PANEL: folders/collections ── */
+.lpanel{width:185px;background:var(--bg1);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.lpanel::-webkit-scrollbar{width:3px}
+.lpanel::-webkit-scrollbar-thumb{background:var(--bg5);border-radius:3px}
+.panel-section-title{font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--t2);padding:12px 12px 5px}
+.tree-item{display:flex;align-items:center;gap:7px;padding:6px 12px;font-size:12px;color:var(--t1);cursor:pointer;transition:background .1s}
+.tree-item:hover{background:var(--bg3);color:var(--t0)}
+.tree-item.active{background:var(--accg);color:var(--acc)}
+.tree-icon{font-size:13px;flex-shrink:0}
+.tree-badge{margin-left:auto;font-size:9.5px;font-family:var(--mono);background:var(--bg4);color:var(--t2);padding:1px 6px;border-radius:10px}
+.tree-divider{height:1px;background:var(--border);margin:6px 0}
+.tree-add-btn{padding:6px 12px;font-size:11px;color:var(--acc);cursor:pointer;opacity:.7;transition:opacity .12s}
+.tree-add-btn:hover{opacity:1}
+/* keep pview for AI tab internal use */
+.pview{display:block}
+
+/* ── RIGHT PANEL: accordion ── */
+.rpanel{width:272px;background:var(--bg1);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+.rpanel-body{flex:1;overflow-y:auto}
+.rpanel-body::-webkit-scrollbar{width:3px}
+.rpanel-body::-webkit-scrollbar-thumb{background:var(--bg5);border-radius:3px}
+.acc-section{border-bottom:1px solid var(--border)}
+.acc-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;transition:background .12s;user-select:none;-webkit-user-select:none}
+.acc-header:hover{background:var(--bg2)}
+.acc-header.open{background:var(--bg2)}
+.acc-title{font-size:11.5px;font-weight:500;color:var(--t1)}
+.acc-header.open .acc-title{color:var(--t0)}
+.acc-arrow{font-size:10px;color:var(--t2);transition:transform .18s;display:inline-block}
+.acc-header.open .acc-arrow{transform:rotate(0deg)}
+.acc-header:not(.open) .acc-arrow{transform:rotate(-90deg)}
+.acc-body{padding:10px 12px}
+.hist-mini{height:32px;background:var(--bg2);border-radius:var(--r);margin-bottom:8px;display:flex;align-items:flex-end;gap:1px;padding:3px 3px 0;overflow:hidden}
+
+
+/* sliders */
+.stitle{font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--t2);margin:12px 0 8px;display:flex;justify-content:space-between;align-items:center}
+.stitle:first-child{margin-top:0}
+.sreset{font-size:9.5px;color:var(--acc);cursor:pointer;font-weight:400;text-transform:none;letter-spacing:0;opacity:0;transition:opacity .15s}
+.stitle-wrap:hover .sreset{opacity:1}
+.srow{display:flex;align-items:center;gap:7px;margin-bottom:8px}
+.slbl{font-size:10.5px;color:var(--t1);width:82px;flex-shrink:0;line-height:1.3}
+.strk{flex:1;height:3px;background:var(--bg5);border-radius:2px;position:relative;cursor:pointer}
+.sfill{height:100%;background:var(--acc);border-radius:2px;pointer-events:none}
+.sthumb{position:absolute;top:50%;width:10px;height:10px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.5);transform:translate(-50%,-50%);pointer-events:none;transition:transform .1s}
+.strk:hover .sthumb{transform:translate(-50%,-50%) scale(1.25)}
+.snum{font-size:10px;color:var(--t2);width:26px;text-align:right;font-family:var(--mono);flex-shrink:0}
+.divider{height:1px;background:var(--border);margin:10px 0}
+.abtn{width:100%;padding:7px;border-radius:var(--r);font-size:11px;font-weight:500;border:1px solid var(--border2);background:var(--bg3);color:var(--t1);cursor:pointer;font-family:var(--font);transition:all .12s;margin-bottom:5px;display:flex;align-items:center;gap:6px;text-align:left}
+.abtn:hover{background:var(--bg4);color:var(--t0)}
+.abtn.blue{border-color:rgba(79,142,247,.2);color:var(--acc);background:var(--accg)}
+.abtn.blue:hover{background:rgba(79,142,247,.16)}
+
+/* ── AI tab ── */
+.ai-analyze-btn{width:100%;padding:10px;border-radius:var(--r);font-size:12px;font-weight:500;border:none;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;cursor:pointer;font-family:var(--font);transition:all .15s;display:flex;align-items:center;justify-content:center;gap:7px;margin-bottom:12px}
+.ai-analyze-btn:hover{opacity:.9}
+.ai-analyze-btn:disabled{background:var(--bg4);color:var(--t2);cursor:default;opacity:1}
+
+.ai-thinking{display:none;flex-direction:column;align-items:center;gap:10px;padding:20px 0}
+.ai-dots{display:flex;gap:5px}
+.ai-dot{width:7px;height:7px;border-radius:50%;background:var(--acc);animation:adot 1.2s infinite}
+.ai-dot:nth-child(2){animation-delay:.2s}
+.ai-dot:nth-child(3){animation-delay:.4s}
+@keyframes adot{0%,80%,100%{opacity:.2;transform:scale(.7)}40%{opacity:1;transform:scale(1)}}
+.ai-think-msg{font-size:10.5px;color:var(--t2);font-family:var(--mono);text-align:center}
+
+.ai-results{display:none}
+.overall-ring-row{display:flex;align-items:center;gap:12px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--rl);padding:12px;margin-bottom:10px}
+.ring{width:56px;height:56px;border-radius:50%;border:3px solid var(--grn);display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0}
+.ring-num{font-size:20px;font-weight:600;line-height:1}
+.ring-lbl{font-size:8px;color:var(--t2);text-transform:uppercase;letter-spacing:.06em}
+.overall-right{flex:1;min-width:0}
+.overall-title{font-size:12px;font-weight:500;color:var(--t0);margin-bottom:3px}
+.overall-sub{font-size:10.5px;color:var(--t1);line-height:1.5}
+
+.priority-box{background:var(--amg);border:1px solid rgba(240,160,48,.2);border-radius:var(--r);padding:9px 11px;margin-bottom:10px;font-size:11px;color:var(--amb);line-height:1.5}
+.priority-box strong{display:block;font-size:9px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px;opacity:.7}
+
+.score-mini-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:10px}
+.score-mini{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:8px}
+.score-mini-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.score-mini-lbl{font-size:10px;color:var(--t1)}
+.score-mini-num{font-size:13px;font-weight:600;font-family:var(--mono)}
+.score-mini-bar{height:3px;background:var(--bg5);border-radius:2px;overflow:hidden}
+.score-mini-fill{height:100%;border-radius:2px}
+.score-mini-note{font-size:9.5px;color:var(--t2);margin-top:4px;line-height:1.4}
+
+.sug-item{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:var(--r);margin-bottom:5px;border:1px solid}
+.sug-item.good{background:var(--gng);border-color:rgba(56,193,114,.18)}
+.sug-item.warn{background:var(--amg);border-color:rgba(240,160,48,.18)}
+.sug-item.fix{background:var(--cog);border-color:rgba(232,81,74,.18)}
+.sug-badge{font-size:8.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:2px 5px;border-radius:3px;flex-shrink:0;margin-top:2px;white-space:nowrap}
+.sug-badge.good{background:rgba(56,193,114,.18);color:var(--grn)}
+.sug-badge.warn{background:rgba(240,160,48,.18);color:var(--amb)}
+.sug-badge.fix{background:rgba(232,81,74,.18);color:var(--cor)}
+.sug-body{flex:1;min-width:0}
+.sug-text{font-size:11px;color:var(--t1);line-height:1.5}
+.sug-impact{font-size:9.5px;color:var(--t2);margin-top:2px}
+.sug-impact span{color:var(--acc)}
+
+.rec-item{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:4px}
+.rec-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.rec-lbl{font-size:11px;color:var(--t1);flex:1}
+.rec-val{font-size:10.5px;font-family:var(--mono);color:var(--acc);background:var(--accg);padding:2px 7px;border-radius:3px;white-space:nowrap}
+
+/* seg chips */
+.seg-chip-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:10px}
+.seg-chip{padding:5px 6px;border-radius:var(--r);border:1px solid var(--border2);background:var(--bg3);color:var(--t1);cursor:pointer;font-size:10px;text-align:center;transition:all .12s;display:flex;flex-direction:column;align-items:center;gap:3px}
+.seg-chip:hover{background:var(--bg4);color:var(--t0)}
+.seg-chip.active{background:var(--accg);color:var(--acc);border-color:rgba(79,142,247,.35)}
+.seg-chip.ai-detected{border-color:rgba(56,193,114,.3);background:var(--gng)}
+.seg-chip.ai-detected.active{background:var(--accg);border-color:rgba(79,142,247,.35);color:var(--acc)}
+
+/* segments */
+.det-row{display:flex;align-items:center;gap:7px;padding:5px 7px;border-radius:var(--r);cursor:pointer;transition:background .1s;margin-bottom:3px}
+.det-row:hover{background:var(--bg3)}
+.det-row.sel{background:var(--accg)}
+.det-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.det-lbl{font-size:11px;color:var(--t1);flex:1}
+.det-row.sel .det-lbl{color:var(--t0)}
+.det-conf{font-size:9.5px;font-family:var(--mono);color:var(--t2)}
+.det-row.sel .det-conf{color:var(--acc)}
+.det-new{font-size:8px;font-weight:600;background:var(--gng);color:var(--grn);border:1px solid rgba(56,193,114,.25);padding:1px 5px;border-radius:3px;flex-shrink:0}
+
+/* distract items */
+.dist-item{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--cog);border:1px solid rgba(232,81,74,.18);border-radius:var(--r);margin-bottom:5px;font-size:11px;color:var(--t1)}
+.dist-item .x{color:var(--cor);flex-shrink:0;font-size:13px}
+.dist-body{flex:1}
+.dist-name{font-weight:500;color:var(--t0);margin-bottom:1px}
+.dist-loc{font-size:10px;color:var(--t2)}
+.dist-rmv{padding:3px 9px;border-radius:var(--r);font-size:10px;border:1px solid rgba(232,81,74,.3);background:transparent;color:var(--cor);cursor:pointer;font-family:var(--font);transition:all .12s;white-space:nowrap;flex-shrink:0}
+.dist-rmv:hover{background:var(--cor);color:#fff;border-color:transparent}
+.dist-rmv.done{border-color:rgba(56,193,114,.3);color:var(--grn);cursor:default}
+.dist-rmv.done:hover{background:transparent;color:var(--grn)}
+.dist-strength{display:flex;align-items:center;gap:6px;padding:0 10px 8px;margin-top:-2px}
+.ds-lbl{font-size:9.5px;color:var(--t2);width:52px;flex-shrink:0}
+.ds-trk{flex:1;height:3px;background:var(--bg5);border-radius:2px;position:relative;cursor:pointer}
+.ds-fill{height:100%;background:var(--cor);border-radius:2px}
+.ds-thumb{position:absolute;top:50%;width:9px;height:9px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.4);transform:translate(-50%,-50%);pointer-events:none}
+.ds-val{font-size:9.5px;font-family:var(--mono);color:var(--t2);width:22px;text-align:right}
+
+/* RE tools sliders with orange fill */
+.sfill-re{background:var(--amb)}
+
+/* ── CANVAS ── */
+.canvas-area{flex:1;display:flex;flex-direction:column;background:var(--bg0);overflow:hidden}
+.ctoolbar{display:flex;align-items:center;padding:0 12px;height:34px;background:var(--bg1);border-bottom:1px solid var(--border);gap:5px;flex-shrink:0}
+.ctool{display:flex;align-items:center;gap:4px;padding:3px 8px;border-radius:var(--r);font-size:10.5px;color:var(--t1);cursor:pointer;border:1px solid transparent;transition:all .1s}
+.ctool:hover{background:var(--bg3);color:var(--t0)}
+.ctool.active{background:var(--bg3);color:var(--acc);border-color:var(--border2)}
+.csep{width:1px;height:16px;background:var(--border);margin:0 2px}
+.zoom-r{margin-left:auto;font-size:10px;color:var(--t2);font-family:var(--mono);display:flex;align-items:center;gap:5px}
+.zbtn{width:17px;height:15px;background:var(--bg3);border-radius:3px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t1);font-size:11px}
+.zbtn:hover{background:var(--bg4);color:var(--t0)}
+
+.canvas-main{flex:1;display:flex;align-items:stretch;justify-content:stretch;position:relative;overflow:hidden}
+.canvas-frame{position:relative;overflow:hidden;border:none;box-shadow:none;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--bg0)}
+
+/* Side-by-side comparison mode */
+.compare-wrap{display:none;width:100%;height:100%;gap:8px;align-items:stretch;padding:8px}
+.compare-wrap.active{display:flex}
+.compare-pane{flex:1;position:relative;border-radius:var(--rl);overflow:hidden;border:1px solid var(--border2);box-shadow:0 4px 20px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;background:var(--bg0)}
+.compare-lbl{position:absolute;top:8px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:600;padding:2px 8px;border-radius:3px;letter-spacing:.06em;text-transform:uppercase;z-index:5;white-space:nowrap}
+.compare-before-lbl{background:rgba(0,0,0,.55);color:rgba(255,255,255,.7)}
+.compare-after-lbl{background:rgba(79,142,247,.25);color:var(--acc)}
+
+/* Zoom wrapper */
+.zoom-viewport{width:100%;height:100%;overflow:hidden;position:relative;cursor:grab}
+.zoom-viewport.grabbing{cursor:grabbing}
+.zoom-viewport canvas{transform-origin:top left;transition:transform 0s}
+.wb-dropper-active{cursor:crosshair!important}
+.wb-loupe{position:absolute;width:80px;height:80px;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,.6);pointer-events:none;z-index:50;display:none;overflow:hidden;background:#000}
+.wb-crosshair{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:10px;height:10px;border:1.5px solid rgba(255,255,255,.9);border-radius:50%;z-index:2;pointer-events:none}
+.wb-swatch{position:absolute;bottom:5px;left:50%;transform:translateX(-50%);font-size:8px;font-family:'DM Mono',monospace;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.9);z-index:2;white-space:nowrap}
+.canvas-drop{width:100%;height:100%;min-height:320px;background:var(--bg2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;cursor:pointer;position:relative;transition:background .15s}
+.canvas-drop.drag{background:rgba(79,142,247,.06)}
+.canvas-drop input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.canvas-drop-icon{width:48px;height:48px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:20px}
+.canvas-drop-txt{font-size:12px;color:var(--t2);text-align:center;line-height:1.6}
+.canvas-drop-txt strong{color:var(--t1);font-weight:500}
+.canvas-photo{width:100%;display:block;max-height:520px;object-fit:contain;display:none}
+.split-line{position:absolute;top:0;bottom:0;left:50%;width:2px;background:#fff;cursor:ew-resize;z-index:20;display:none;user-select:none;-webkit-user-select:none}
+.split-pill{position:absolute;top:50%;transform:translate(-50%,-50%);width:26px;height:26px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#111;font-size:10px;cursor:ew-resize;box-shadow:0 2px 6px rgba(0,0,0,.4);user-select:none;-webkit-user-select:none}
+.ba-lbl{position:absolute;top:8px;font-size:9px;font-weight:600;padding:2px 6px;border-radius:3px;letter-spacing:.06em;text-transform:uppercase;display:none}
+.before-cover{position:absolute;top:0;left:0;bottom:0;background:rgba(13,13,17,.55);backdrop-filter:grayscale(1) brightness(.6);pointer-events:none;display:none}
+.seg-overlays{position:absolute;inset:0;pointer-events:none}
+.seg-ov{position:absolute;border:2px solid;border-radius:3px;display:flex;align-items:flex-start;padding:3px 5px;cursor:pointer;pointer-events:all;transition:opacity .15s}
+.seg-ov-tag{font-size:8.5px;font-weight:600;padding:1px 4px;border-radius:2px}
+.dist-overlays{position:absolute;inset:0;pointer-events:none}
+.dist-ov{position:absolute;border:2px dashed var(--cor);border-radius:3px;display:flex;align-items:center;justify-content:center}
+.dist-ov-tag{font-size:9px;font-weight:600;color:var(--cor);background:rgba(232,81,74,.2);padding:1px 5px;border-radius:3px}
+
+/* AI prompt bar */
+.ai-bar{padding:8px 12px;background:var(--bg1);border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0}
+.ai-inp{flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:6px 11px;font-size:11.5px;color:var(--t0);font-family:var(--font);outline:none;transition:border-color .15s}
+.ai-inp:focus{border-color:var(--acc)}
+.ai-inp::placeholder{color:var(--t2)}
+.chips-row{display:flex;gap:5px;flex-wrap:nowrap;overflow-x:auto;padding:0 12px 8px;background:var(--bg1)}
+.chips-row::-webkit-scrollbar{height:0}
+.chip{padding:3px 9px;border-radius:20px;border:1px solid var(--border2);background:var(--bg3);font-size:10px;color:var(--t1);cursor:pointer;white-space:nowrap;transition:all .1s;flex-shrink:0}
+.chip:hover{background:var(--bg4);color:var(--t0);border-color:rgba(79,142,247,.4)}
+
+/* filmstrip */
+.filmstrip{height:130px;background:var(--bg1);border-top:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.film-bar{display:flex;align-items:center;padding:5px 12px;gap:8px;border-bottom:1px solid var(--border);flex-shrink:0}
+.film-lbl{font-size:9.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
+.film-sel{font-size:10.5px;color:var(--acc);font-weight:500}
+.film-scroll{display:flex;gap:6px;padding:7px 12px;overflow-x:auto;align-items:center;flex:1}
+.film-scroll::-webkit-scrollbar{height:3px}
+.film-scroll::-webkit-scrollbar-thumb{background:var(--bg5);border-radius:3px}
+.fthumb{border-radius:var(--r);overflow:hidden;border:2px solid transparent;cursor:pointer;position:relative;flex-shrink:0;width:82px;height:60px;transition:border-color .12s}
+.fthumb:hover{border-color:var(--border3)}
+.fthumb.active{border-color:var(--acc)}
+.fthumb.selected{border-color:var(--grn)}
+.fthumb-img{width:100%;height:100%;object-fit:cover;display:block}
+.fthumb-chk{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:3px;background:var(--grn);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .1s;font-size:9px}
+.fthumb.selected .fthumb-chk{opacity:1}
+.fthumb-num{position:absolute;bottom:2px;right:3px;font-size:8.5px;font-family:var(--mono);color:rgba(255,255,255,.4)}
+.fthumb-star{position:absolute;top:2px;right:3px;color:var(--amb);font-size:9.5px}
+.sync-btn{margin-left:auto;padding:4px 11px;border-radius:var(--r);font-size:10.5px;font-weight:500;background:var(--acc);border:none;color:#fff;cursor:pointer;font-family:var(--font);display:flex;align-items:center;gap:4px;transition:background .12s}
+.sync-btn:hover{background:#3a7fe6}
+.sync-btn:disabled{background:var(--bg4);color:var(--t2);cursor:default}
+
+/* status bar */
+.statusbar{display:flex;align-items:center;height:22px;background:var(--bg1);border-top:1px solid var(--border);padding:0 12px;gap:14px;flex-shrink:0}
+.si{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--t2);font-family:var(--mono)}
+.sdot{width:5px;height:5px;border-radius:50%;background:var(--grn)}
+
+/* no-photo overlay on AI tab */
+.no-photo-msg{text-align:center;padding:30px 16px;color:var(--t2);font-size:11px;line-height:1.7}
+.no-photo-msg strong{color:var(--t1);display:block;margin-bottom:6px;font-size:12px}
+
+/* hist */
+.hist{height:38px;background:var(--bg2);border-radius:var(--r);margin-bottom:10px;display:flex;align-items:flex-end;gap:1px;padding:3px 3px 0;overflow:hidden;flex-shrink:0}
+.hb{flex:1;border-radius:1px 1px 0 0;opacity:.6}
+
+/* section count badge */
+.scnt{background:var(--bg4);color:var(--t2);font-size:9px;padding:1px 5px;border-radius:10px;font-family:var(--mono)}
+</style>
+</head>
+<body>
+<div style="display:flex;flex-direction:column;height:100vh;overflow:hidden">
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo"><div class="logo-mark">🏡</div>Frameroom</div>
+  <div style="display:flex;gap:2px">
+    <div class="nav-pill">Library</div>
+    <div class="nav-pill active">Develop</div>
+    <div class="nav-pill">Export</div>
+    <div class="nav-pill">Profile</div>
+  </div>
+  <div class="topbar-right">
+    <div id="bulkBadge" style="display:none;font-size:10px;color:var(--grn);font-weight:500;padding:2px 8px;background:var(--gng);border:1px solid rgba(56,193,114,.25);border-radius:20px">0 selected</div>
+    <button class="tbtn">Upgrade</button>
+    <button class="tbtn acc">Export</button>
+    <div class="av" style="font-size:10px;font-weight:600">JD</div>
+  </div>
+</div>
+
+<!-- API BAR -->
+<div class="api-bar">
+  <span class="api-lbl">🔑 API Key</span>
+  <input class="api-inp" type="password" id="apiKey" placeholder="Paste your Anthropic API key (sk-ant-...)" oninput="checkKey()">
+  <div class="api-dot" id="apiDot"></div>
+  <span class="api-txt" id="apiTxt">Not set — needed for AI features</span>
+</div>
+
+<!-- WORKSPACE -->
+<div class="workspace">
+
+  <!-- LEFT PANEL: folders/collections only -->
+  <div class="lpanel">
+    <div class="panel-section-title">Library</div>
+    <div class="tree-item active" id="lib-all"><span class="tree-icon">🏠</span>All Photos <span class="tree-badge" id="libCount">0</span></div>
+    <div class="tree-item" id="lib-flagged"><span class="tree-icon">★</span>Flagged</div>
+    <div class="tree-divider"></div>
+    <div class="panel-section-title">Collections</div>
+    <div class="tree-item" id="col-1"><span class="tree-icon">📁</span>123 Oak Street</div>
+    <div class="tree-item" id="col-2"><span class="tree-icon">📁</span>Riverside Condo</div>
+    <div class="tree-item" id="col-3"><span class="tree-icon">📁</span>Highland Estates</div>
+    <div class="tree-add-btn" onclick="addCollection()">+ New collection</div>
+    <div class="tree-divider"></div>
+    <div class="panel-section-title">Quick Filter</div>
+    <div class="tree-item"><span class="tree-icon">🕐</span>Recent</div>
+    <div class="tree-item"><span class="tree-icon">✏️</span>Unedited</div>
+    <div class="tree-item"><span class="tree-icon">✓</span>Approved</div>
+  </div><!-- /lpanel -->
+
+  <!-- CANVAS -->
+  <div class="canvas-area">
+    <div class="ctoolbar">
+      <div class="ctool active">✋ Pan</div>
+      <div class="ctool" id="cropToolBtn" onclick="activateCropTool()">⊡ Crop</div>
+      <div class="ctool">✦ Heal</div>
+      <div class="ctool">△ Mask</div>
+      <div class="csep"></div>
+      <div class="ctool" id="baBtn" onclick="toggleBA()">◫ Split</div>
+      <div class="ctool" id="sbsBtn" onclick="toggleSideBySide()">⬜⬜ Compare</div>
+      <div class="ctool" id="segBtn" onclick="toggleSegView()">◈ Seg overlay</div>
+      <div class="ctool" id="dBtn" onclick="toggleDistView()">✕ Distractions</div>
+      <div class="csep"></div>
+      <div class="ctool" id="undoBtn" onclick="undoEdit()" title="Undo (⌘Z)" style="opacity:.4">↩ Undo</div>
+      <div class="ctool" id="masterResetBtn" onclick="confirmMasterReset()" title="Reset all edits to zero" style="color:var(--cor);opacity:.7">⊘ Reset all</div>
+      <div class="csep"></div>
+      <div class="ctool" onclick="switchAccordion('ai')">🧠 Analyze</div>
+      <div class="ctool" onclick="document.getElementById('photoInput').click()">📷 Load photo</div>
+      <div class="zoom-r">
+        <span id="zpct">100%</span>
+        <div class="zbtn" onclick="adjZoom(-1)">−</div>
+        <div class="zbtn" onclick="adjZoom(1)">+</div>
+      </div>
+    </div>
+
+    <div class="canvas-main" id="canvasMain">
+      <div class="compare-wrap" id="compareWrap">
+        <div class="compare-pane">
+          <span class="compare-lbl compare-before-lbl">Before</span>
+          <canvas id="beforeCanvas" style="max-width:100%;max-height:100%;width:auto;height:auto;display:block"></canvas>
+        </div>
+        <div class="compare-pane">
+          <span class="compare-lbl compare-after-lbl">After</span>
+          <canvas id="afterCanvas" style="max-width:100%;max-height:100%;width:auto;height:auto;display:block"></canvas>
+        </div>
+      </div>
+      <div class="canvas-frame" id="cframe"
+        ondragover="cdDrag(event)" ondragleave="cdOff(event)" ondrop="cdDrop(event)">
+        <input type="file" accept="image/*" id="photoInput" onchange="photoFile(event)" style="display:none">
+        <div class="canvas-drop" id="canvasDrop"
+          ondragover="cdDrag(event)" ondragleave="cdOff(event)" ondrop="cdDrop(event)"
+          onclick="document.getElementById('photoInput').click()"
+          style="display:flex">
+          <div id="dropPrompt" style="display:flex;flex-direction:column;align-items:center;gap:10px;pointer-events:none">
+            <div class="canvas-drop-icon">📷</div>
+            <div class="canvas-drop-txt">
+              <strong>Drop a photo here or click to browse</strong>
+              JPG, PNG, WEBP supported
+            </div>
+          </div>
+        </div>
+        <img id="canvasPhoto" alt="Loaded photo" style="display:none">
+        <canvas id="canvasOut" style="display:none;max-width:100%;max-height:100%;width:auto;height:auto;cursor:crosshair;border-radius:0"></canvas>
+        <!-- Crop overlay canvas — never rotates, always aligned to screen -->
+        <canvas id="cropOverlayCanvas" style="position:absolute;top:0;left:0;pointer-events:none;display:none;z-index:15"></canvas>
+        <div class="before-cover" id="beforeCover"></div>
+        <div class="split-line" id="splitLine"><div class="split-pill">⇔</div></div>
+        <div class="ba-lbl" id="baLblB" style="left:10px;background:rgba(0,0,0,.5);color:rgba(255,255,255,.6)">Before</div>
+        <div class="ba-lbl" id="baLblA" style="right:10px;background:var(--accg);color:var(--acc)">After</div>
+        <div class="seg-overlays" id="segOverlays"></div>
+        <div class="dist-overlays" id="distOverlays"></div>
+        <div class="wb-loupe" id="wbLoupe">
+          <canvas id="wbLoupeCanvas" width="80" height="80"></canvas>
+          <div class="wb-crosshair"></div>
+          <div class="wb-swatch" id="wbSwatch"></div>
+        </div>
+      </div><!-- /canvas-frame -->
+    </div><!-- /canvas-main -->
+
+    <div class="ai-bar">
+      <span style="font-size:14px;color:var(--acc)">✦</span>
+      <input class="ai-inp" type="text" id="aiInp" placeholder="Describe an edit… e.g. 'remove air vent', 'replace sky', 'clean the floor'">
+      <button class="tbtn acc" onclick="runAIEdit()">▶ Apply</button>
+    </div>
+    <div class="chips-row">
+      <div class="chip" onclick="setChip('Replace sky with blue sky')">☁ Replace sky</div>
+      <div class="chip" onclick="setChip('Remove window glare')">✦ Remove glare</div>
+      <div class="chip" onclick="setChip('Blend bracketed HDR shots')">◈ HDR blend</div>
+      <div class="chip" onclick="setChip('Clean and enhance floor')">▭ Clean floors</div>
+      <div class="chip" onclick="setChip('Remove all air vents')">◎ Remove vents</div>
+      <div class="chip" onclick="setChip('Auto color correct for real estate')">◑ Auto color</div>
+    </div>
+
+    <div class="filmstrip">
+      <div class="film-bar">
+        <span class="film-lbl">Photo Strip</span>
+        <span class="film-sel" id="filmSel"></span>
+        <div style="display:flex;align-items:center;gap:5px;margin-left:auto">
+          <button class="tbtn" onclick="selAll()">Select all</button>
+          <button class="tbtn" onclick="clrSel()">Clear</button>
+          <button class="sync-btn" id="syncBtn" disabled onclick="syncEdits()">↺ Sync edits</button>
+        </div>
+      </div>
+      <div class="film-scroll" id="filmScroll"></div>
+    </div>
+  </div><!-- /canvas-area -->
+
+  <!-- RIGHT PANEL: accordion editing tools -->
+  <div class="rpanel" id="rpanel">
+    <div class="rpanel-body" id="rpanel-body">
+
+      <!-- ACCORDION: Histogram -->
+      <div class="acc-section" id="acc-histogram">
+        <div class="acc-header open" onclick="toggleAccordion('histogram')">
+          <span class="acc-title">Histogram</span>
+          <span class="acc-arrow">▾</span>
+        </div>
+        <div class="acc-body" id="acc-body-histogram">
+          <div class="hist" id="hist1"></div>
+          <div class="hist" id="hist2" style="display:none"></div>
+        </div>
+      </div>
+
+      <!-- ACCORDION: AI Analysis -->
+      <div class="acc-section" id="acc-ai">
+        <div class="acc-header" onclick="toggleAccordion('ai')">
+          <span class="acc-title">✦ AI Analysis</span>
+          <span class="acc-arrow">▾</span>
+        </div>
+        <div class="acc-body" id="acc-body-ai" style="display:none">
+          <button class="ai-analyze-btn" id="analyzeBtn" onclick="runAnalysis()" disabled>
+          🧠 Analyze this photo with AI
+        </button>
+        <div id="ai-no-photo" class="no-photo-msg">
+          <strong>No photo loaded</strong>
+          Drop a photo on the canvas first, then click Analyze to get scores, segment detection, distraction scan, and edit recommendations.
+        </div>
+        <div class="ai-thinking" id="ai-thinking">
+          <div class="ai-dots"><div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div></div>
+          <div class="ai-think-msg" id="ai-think-msg">Running full checklist...</div>
+        </div>
+        <div class="ai-results" id="ai-results">
+          <div class="overall-ring-row">
+            <div class="ring" id="ai-ring">
+              <span class="ring-num" id="ai-score-num">—</span>
+              <span class="ring-lbl">/ 100</span>
+            </div>
+            <div class="overall-right">
+              <div class="overall-title" id="ai-title"></div>
+              <div class="overall-sub" id="ai-sub"></div>
+            </div>
+          </div>
+          <div class="priority-box" id="ai-priority" style="display:none">
+            <strong>⚡ Top priority</strong>
+            <span id="ai-priority-txt"></span>
+          </div>
+          <div class="score-mini-grid" id="ai-scores"></div>
+          <div style="font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);margin-bottom:8px;display:flex;align-items:center;gap:5px">
+            Suggestions <span class="scnt" id="sug-count">0</span>
+          </div>
+          <div id="ai-sugs" style="margin-bottom:10px"></div>
+          <div style="font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);margin-bottom:8px;display:flex;align-items:center;gap:5px">
+            Edit Recommendations <span class="scnt" id="rec-count">0</span>
+          </div>
+          <div id="ai-recs" style="margin-bottom:10px"></div>
+          <button class="abtn" style="width:100%;justify-content:center" onclick="runAnalysis()">↺ Re-analyze</button>
+        </div>
+        </div>
+      </div>
+
+      <!-- ACCORDION: Tone -->
+      <div class="acc-section" id="acc-tone">
+        <div class="acc-header open" onclick="toggleAccordion('tone')">
+          <span class="acc-title">Tone</span>
+          <span class="acc-arrow">▾</span>
+        </div>
+        <div class="acc-body" id="acc-body-tone">
+          <div class="hist-mini" id="hist1b"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <span class="stitle" style="margin:0">Tone</span>
+            <span class="sreset" style="opacity:.6" onclick="resetGroup('tone')">reset</span>
+          </div>
+          <div id="sl-tone"></div>
+          <div class="divider"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <span class="stitle" style="margin:0">Presence</span>
+            <span class="sreset" style="opacity:.6" onclick="resetGroup('presence')">reset</span>
+          </div>
+          <div id="sl-presence"></div>
+          <div class="divider"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <span class="stitle" style="margin:0">Detail</span>
+            <span class="sreset" style="opacity:.6" onclick="resetGroup('detail')">reset</span>
+          </div>
+          <div id="sl-detail"></div>
+        </div>
+      </div>
+
+      <!-- ACCORDION: White Balance -->
+      <div class="acc-section" id="acc-wb">
+        <div class="acc-header open" onclick="toggleAccordion('wb')">
+          <span class="acc-title">White Balance</span>
+          <span class="acc-arrow">▾</span>
+        </div>
+        <div class="acc-body" id="acc-body-wb">
+          <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--rl);padding:10px;margin-bottom:10px">
+            <div style="font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--t2);margin-bottom:8px">White Balance Tools</div>
+            <button id="wbDropperBtn" onclick="toggleWBDropper()"
+              style="width:100%;padding:8px;border-radius:var(--r);font-size:11.5px;font-weight:500;border:1px solid var(--border2);background:var(--bg3);color:var(--t1);cursor:pointer;font-family:var(--font);transition:all .15s;display:flex;align-items:center;justify-content:center;gap:7px;margin-bottom:6px">
+              💧 Eyedropper — click a neutral area
+            </button>
+            <button id="wbAutoBtn" onclick="runAutoWB()"
+              style="width:100%;padding:8px;border-radius:var(--r);font-size:11.5px;font-weight:500;border:1px solid rgba(79,142,247,.25);background:rgba(79,142,247,.07);color:var(--acc);cursor:pointer;font-family:var(--font);transition:all .15s;display:flex;align-items:center;justify-content:center;gap:7px;margin-bottom:6px">
+              🧠 AI Auto White Balance
+            </button>
+            <div id="wbStatus" style="display:none;font-size:10.5px;line-height:1.5;padding:7px 9px;border-radius:var(--r);border:1px solid var(--border2);background:var(--bg3)"></div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <span class="stitle" style="margin:0">Temperature &amp; Tint</span>
+            <span class="sreset" style="opacity:.6" onclick="resetGroup('wb')">reset</span>
+          </div>
+          <div id="sl-wb"></div>
+        </div>
+      </div>
+
+      <!-- ACCORDION: Color Mix -->
+      <div class="acc-section" id="acc-color">
+        <div class="acc-header" onclick="toggleAccordion('color')">
+          <span class="acc-title">Color Mix</span>
+          <span class="acc-arrow">▾</span>
+        </div>
+        <div class="acc-body" id="acc-body-color" style="display:none">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <span class="stitle" style="margin:0">Color Mix</span>
+            <span class="sreset" style="opacity:.6" onclick="resetGroup('cmix')">reset</span>
+          </div>
+          <div id="sl-cmix"></div>
+        </div>
+      </div>
+
+      <!-- ACCORDION: RE Tools -->
+      <div class="acc-section" id="acc-re">
+        <div class="acc-header" onclick="toggleAccordion('re')">
+          <span class="acc-title">RE Tools</span>
+          <span class="acc-arrow">▾</span>
+        </div>
+        <div class="acc-body" id="acc-body-re" style="display:none">
+          <!-- ── UNIFY ROOM ── -->
+        <div id="unify-box" style="background:var(--bg2);border:1px solid rgba(56,193,114,.2);border-radius:var(--rl);padding:11px;margin-bottom:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+            <div style="font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--grn)">✦ Unify Room</div>
+            <button id="unifyBtn" onclick="applyUnifyRoom()" style="padding:3px 10px;border-radius:var(--r);font-size:10px;font-weight:500;border:none;background:var(--grn);color:#fff;cursor:pointer;font-family:var(--font);transition:all .12s">Auto-unify</button>
+          </div>
+          <div style="font-size:10px;color:var(--t2);margin-bottom:10px;line-height:1.5">Corrects cool shadows along ceiling edges and unifies color temperature across walls, ceiling and floor zones independently.</div>
+
+          <!-- CEILING ZONE -->
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+            <div style="width:8px;height:8px;border-radius:50%;background:#a07cf0;flex-shrink:0"></div>
+            <span style="font-size:10px;font-weight:600;color:var(--t1);flex:1">Ceiling zone</span>
+            <span style="font-size:9px;color:var(--t2)">top 30%</span>
+          </div>
+          <div id="sl-zone-ceiling"></div>
+
+          <!-- EDGE / TRANSITION ZONE -->
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;margin-top:4px">
+            <div style="width:8px;height:8px;border-radius:50%;background:#f0a030;flex-shrink:0"></div>
+            <span style="font-size:10px;font-weight:600;color:var(--t1);flex:1">Wall edges</span>
+            <span style="font-size:9px;color:var(--t2)">corners + borders</span>
+          </div>
+          <div id="sl-zone-edges"></div>
+
+          <!-- WALLS ZONE -->
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;margin-top:4px">
+            <div style="width:8px;height:8px;border-radius:50%;background:#4f8ef7;flex-shrink:0"></div>
+            <span style="font-size:10px;font-weight:600;color:var(--t1);flex:1">Walls</span>
+            <span style="font-size:9px;color:var(--t2)">mid tones</span>
+          </div>
+          <div id="sl-zone-walls"></div>
+
+          <!-- FLOOR ZONE -->
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;margin-top:4px">
+            <div style="width:8px;height:8px;border-radius:50%;background:#3dbab0;flex-shrink:0"></div>
+            <span style="font-size:10px;font-weight:600;color:var(--t1);flex:1">Floor zone</span>
+            <span style="font-size:9px;color:var(--t2)">bottom 25%</span>
+          </div>
+          <div id="sl-zone-floor"></div>
+
+          <button onclick="resetUnify()" style="width:100%;margin-top:8px;padding:5px;border-radius:var(--r);font-size:10.5px;border:1px solid var(--border2);background:transparent;color:var(--t2);cursor:pointer;font-family:var(--font);transition:all .12s" onmouseover="this.style.color='var(--t0)'" onmouseout="this.style.color='var(--t2)'">↺ Reset all zones</button>
+        </div>
+
+        <div class="divider"></div>
+        <div class="stitle">AI Real Estate Tools</div>
+        <div style="font-size:10px;color:var(--t2);margin-bottom:10px;line-height:1.5">Slide right to increase effect intensity.</div>
+        <div id="sl-re"></div>
+        <div class="divider"></div>
+        <div class="stitle">Auto Corrections</div>
+        <div id="sl-auto"></div>
+        <div class="divider"></div>
+        <div class="stitle">RE Presets</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
+          <button class="abtn">☀ Bright Interior</button>
+          <button class="abtn">🌅 Exterior Gold</button>
+          <button class="abtn">🌙 Twilight</button>
+          <button class="abtn">✈ Aerial</button>
+          <button class="abtn">🍳 Clean Kitchen</button>
+          <button class="abtn">🛁 Bathroom</button>
+        </div>
+        </div>
+      </div>
+
+      <!-- ACCORDION: Segments -->
+      <div class="acc-section" id="acc-seg">
+        <div class="acc-header" onclick="toggleAccordion('seg')">
+          <span class="acc-title">Segments</span>
+          <span class="acc-arrow">▾</span>
+        </div>
+        <div class="acc-body" id="acc-body-seg" style="display:none">
+          <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--rl);padding:10px;margin-bottom:10px">
+          <div style="font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);margin-bottom:7px;display:flex;align-items:center;gap:5px">
+            ✦ AI Detected Segments
+            <span class="scnt" id="segDetCount">0</span>
+          </div>
+          <div id="det-list"><div style="font-size:10.5px;color:var(--t2);padding:4px 0">Analyze a photo to detect segments</div></div>
+        </div>
+        <div class="divider" style="margin:6px 0"></div>
+        <div style="font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--acc);margin-bottom:8px" id="seg-edit-lbl">Editing: Select a segment</div>
+        <div id="sl-seg"></div>
+        <div id="lights-panel" style="display:none">
+          <div style="background:var(--bg2);border:1px solid rgba(240,160,48,.2);border-radius:var(--rl);padding:10px;margin-top:6px;margin-bottom:10px">
+            <div style="font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--amb);margin-bottom:8px">💡 Light Shape</div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:10px" id="shape-btns">
+              <div class="shape-btn active" onclick="setShape(this,'Round')" style="border:1px solid rgba(240,160,48,.35);background:rgba(240,160,48,.08);border-radius:var(--r);padding:5px 2px;cursor:pointer;text-align:center;font-size:9px;color:var(--amb)">⊙<br>Round</div>
+              <div class="shape-btn" onclick="setShape(this,'Square')" style="border:1px solid var(--border2);background:var(--bg3);border-radius:var(--r);padding:5px 2px;cursor:pointer;text-align:center;font-size:9px;color:var(--t2)">▣<br>Square</div>
+              <div class="shape-btn" onclick="setShape(this,'Linear')" style="border:1px solid var(--border2);background:var(--bg3);border-radius:var(--r);padding:5px 2px;cursor:pointer;text-align:center;font-size:9px;color:var(--t2)">▬<br>Linear</div>
+              <div class="shape-btn" onclick="setShape(this,'Spot')" style="border:1px solid var(--border2);background:var(--bg3);border-radius:var(--r);padding:5px 2px;cursor:pointer;text-align:center;font-size:9px;color:var(--t2)">✦<br>Spot</div>
+            </div>
+            <div id="sl-light-shape"></div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div style="font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);margin-bottom:8px">Quick Select</div>
+        <div class="seg-chip-grid" id="seg-chips"></div>
+        </div>
+      </div>
+
+      <!-- ACCORDION: Clean Up -->
+      <div class="acc-section" id="acc-clean">
+        <div class="acc-header" onclick="toggleAccordion('clean')">
+          <span class="acc-title">Clean Up</span>
+          <span class="acc-arrow">▾</span>
+        </div>
+        <div class="acc-body" id="acc-body-clean" style="display:none">
+          <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--rl);padding:10px;margin-bottom:10px">
+          <div style="font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);margin-bottom:4px;display:flex;align-items:center;gap:5px">
+            ✕ Distraction Removal
+            <span class="scnt" id="distCount">0</span>
+          </div>
+          <div style="font-size:10px;color:var(--t2);margin-bottom:10px;line-height:1.5">Analyze a photo to detect distractions. Slide to control removal intensity.</div>
+          <div id="dist-list"><div style="font-size:10.5px;color:var(--t2);padding:2px 0">No distractions detected yet</div></div>
+        </div>
+        <div class="divider"></div>
+        <div class="stitle">Manual Paint Removal</div>
+        <div style="font-size:10px;color:var(--t2);margin-bottom:8px;line-height:1.5">Paint over any area to remove it using AI content-aware fill.</div>
+        <button class="abtn blue" style="width:100%;justify-content:center;margin-bottom:5px">🖌 Paint to remove</button>
+        <button class="abtn blue" style="width:100%;justify-content:center" id="removeAllBtn">✕ Remove all detected</button>
+        <div class="divider"></div>
+        <div class="stitle">Global Cleanup</div>
+        <div id="sl-cleanup"></div>
+        </div>
+      </div>
+
+      <!-- ACCORDION: Geometry -->
+      <div class="acc-section" id="acc-geo">
+        <div class="acc-header" onclick="toggleAccordion('geo')">
+          <span class="acc-title">Geometry</span>
+          <span class="acc-arrow">▾</span>
+        </div>
+        <div class="acc-body" id="acc-body-geo" style="display:none">
+          <div class="stitle">Lens & Perspective</div>
+        <div style="font-size:10px;color:var(--t2);margin-bottom:8px;line-height:1.5;padding:6px 8px;background:var(--bg2);border-radius:var(--r);border:1px solid var(--border)">
+          ⚠ Vertical, Horizontal & Distortion corrections require Phase 3 backend. Coming soon.
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <span class="stitle" style="margin:0">Lens & Perspective</span>
+          <span class="sreset" style="opacity:.6" onclick="resetGroup('geo')">reset</span>
+        </div>
+        <div id="sl-geo"></div>
+        <div class="divider"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <span class="stitle" style="margin:0">Rotation</span>
+          <span style="font-size:10px;color:var(--t2);font-family:var(--mono)" id="rotReadout">0.0°</span>
+        </div>
+        <div id="sl-crop"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:10px;margin-top:4px">
+          <button class="abtn" onclick="resetRotation()">↺ Reset rotation</button>
+          <button class="abtn" onclick="applyRotation()">✓ Apply & crop</button>
+        </div>
+        <div class="divider"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <span class="stitle" style="margin:0">Crop</span>
+          <span class="sreset" style="opacity:.6" onclick="resetGroup('crop')">reset</span>
+          <span style="font-size:10px;color:var(--acc);cursor:pointer" onclick="toggleCrop()">
+            <span id="cropToggleLbl">Enable crop</span>
+          </span>
+        </div>
+        <div id="cropInfo" style="font-size:10px;color:var(--t2);margin-bottom:8px;display:none">
+          Drag handles to crop. Use the dial below to straighten.
+        </div>
+
+        <!-- Straighten dial — shown when crop is active -->
+        <div id="straightenPanel" style="display:none;margin-bottom:10px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <span style="font-size:10px;color:var(--t1);font-weight:500">Straighten</span>
+            <span style="font-size:10px;font-family:var(--mono);color:var(--acc)" id="straightenReadout">0.0°</span>
+          </div>
+          <!-- SVG dial -->
+          <div style="display:flex;align-items:center;justify-content:center;margin-bottom:6px">
+            <svg id="straightenDial" width="200" height="48"
+              style="cursor:ew-resize;user-select:none;-webkit-user-select:none"
+              onmousedown="startStraightenDrag(event)"
+              ontouchstart="startStraightenTouch(event)">
+              <!-- Tick marks -->
+              <g id="dialTicks"></g>
+              <!-- Center indicator line -->
+              <line x1="100" y1="4" x2="100" y2="44"
+                stroke="var(--acc)" stroke-width="2"
+                stroke-linecap="round"/>
+              <!-- Drag hint arrows -->
+              <text x="10" y="30" fill="rgba(255,255,255,.2)"
+                font-size="11" font-family="DM Sans,sans-serif">◀</text>
+              <text x="182" y="30" fill="rgba(255,255,255,.2)"
+                font-size="11" font-family="DM Sans,sans-serif">▶</text>
+            </svg>
+          </div>
+          <div style="display:flex;gap:5px;margin-bottom:6px">
+            <button class="abtn" style="flex:1;justify-content:center;font-size:10px"
+              onclick="straightenAngle=0;applyStraighten()">↺ Reset</button>
+            <button class="abtn blue" style="flex:1;justify-content:center;font-size:10px"
+              onclick="commitStraighten()">✓ Apply</button>
+          </div>
+          <div style="font-size:9.5px;color:var(--t2);line-height:1.5;padding:0 2px">
+            Drag the dial left/right to rotate. Crop auto-adjusts to hide corners.
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:10px" id="cropBtns" style="display:none">
+          <button class="abtn blue" onclick="applyCrop()">✓ Apply crop</button>
+          <button class="abtn" onclick="resetCrop()">✕ Cancel</button>
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:8px;margin-bottom:8px" id="cropDimsBox" style="display:none">
+          <div style="font-size:10px;color:var(--t2);margin-bottom:4px">Crop area</div>
+          <div style="font-size:11px;color:var(--t1);font-family:var(--mono)" id="cropDims">—</div>
+        </div>
+        <div class="divider"></div>
+        <button class="abtn blue" style="width:100%;justify-content:center;margin-bottom:5px" onclick="autoStraighten()">↕ Auto-straighten (rotation guide)</button>
+        <button class="abtn blue" style="width:100%;justify-content:center">⊙ Auto lens correction (Phase 3)</button>
+        </div>
+      </div>
+
+    </div><!-- /rpanel-body -->
+  </div><!-- /rpanel -->
+
+</div><!-- /workspace -->
+
+
+<div class="statusbar">
+  <div class="si"><div class="sdot"></div>Ready</div>
+  <div class="si" id="stFile">No photo loaded</div>
+  <div class="si" id="stDims"></div>
+  <div class="si" id="stExif"></div>
+  <div class="si" style="margin-left:auto;color:var(--acc)" id="stAI"></div>
+</div>
+
+</div><!-- /shell -->
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────
+let hasKey=false, hasPhoto=false;
+let imageBase64=null, imageType=null;
+let splitOn=false, segView=false, distView=false, zoom=100;
+let sbsMode=false;
+
+// ── UNDO HISTORY ──────────────────────────────────────────────
+// Stores snapshots of editVals so any change can be undone
+const MAX_UNDO = 30;
+let undoStack = [];
+let undoPointer = -1; // points to current state in stack
+
+function snapshotForUndo() {
+  // Called before any slider change is committed
+  // Trim anything ahead of current pointer (new branch)
+  undoStack = undoStack.slice(0, undoPointer + 1);
+  undoStack.push(JSON.stringify(editVals));
+  if (undoStack.length > MAX_UNDO) undoStack.shift();
+  undoPointer = undoStack.length - 1;
+  updateUndoBtn();
+}
+
+function undoEdit() {
+  if (undoPointer <= 0) return;
+  undoPointer--;
+  const saved = JSON.parse(undoStack[undoPointer]);
+  Object.assign(editVals, saved);
+  // Rebuild all slider UIs to reflect restored values
+  rebuildAllSliders();
+  renderCanvas(false);
+  updateUndoBtn();
+}
+
+function updateUndoBtn() {
+  const btn = document.getElementById('undoBtn');
+  if (!btn) return;
+  btn.style.opacity = undoPointer > 0 ? '1' : '0.4';
+  btn.title = undoPointer > 0 ? `Undo (⌘Z) — ${undoPointer} step${undoPointer>1?'s':''}` : 'Nothing to undo';
+}
+
+function rebuildAllSliders() {
+  // Rebuild every slider group with current editVals
+  Object.entries(SLIDERS).forEach(([key, rows]) => {
+    const cid = 'sl-' + key;
+    if (!document.getElementById(cid)) return;
+    // Build with current editVals injected
+    const updatedRows = rows.map(([label, def, min, max]) => {
+      const param = PARAM_MAP[label];
+      const val = param !== undefined && editVals[param] !== undefined
+        ? editVals[param] : def;
+      return [label, val, min, max];
+    });
+    if (key === 're') buildSliders(cid, updatedRows, true);
+    else buildSliders(cid, updatedRows);
+  });
+  // Zone sliders
+  ['ceiling','edges','walls','floor'].forEach(zone => {
+    buildZoneSliders(zone, ZONE_SLIDERS[zone]);
+  });
+}
+let selectedSeg=null;
+let selectedThumbs=new Set();
+let aiData=null;
+let removedDistracts=new Set();
+
+// ── API KEY ────────────────────────────────────────────────────
+function checkKey(){
+  const k=document.getElementById('apiKey').value.trim();
+  hasKey=k.startsWith('sk-ant-')&&k.length>20;
+  const dot=document.getElementById('apiDot');
+  const txt=document.getElementById('apiTxt');
+  if(hasKey){dot.className='api-dot ok';txt.className='api-txt ok';txt.textContent='Key ready ✓';}
+  else if(k.length>0){dot.className='api-dot err';txt.className='api-txt';txt.style.color='var(--cor)';txt.textContent='Invalid key format';}
+  else{dot.className='api-dot';txt.className='api-txt';txt.textContent='Not set — needed for AI features';}
+  updateAnalyzeBtn();
+}
+function updateAnalyzeBtn(){
+  const btn=document.getElementById('analyzeBtn');
+  btn.disabled=!(hasKey&&hasPhoto);
+  btn.textContent=!hasPhoto?'🧠 Load a photo first':!hasKey?'🧠 Enter API key first':'🧠 Analyze this photo with AI';
+}
+
+// ── PHOTO LOAD ─────────────────────────────────────────────────
+function cdDrag(e){e.preventDefault();document.getElementById('canvasDrop').classList.add('drag');}
+function cdOff(e){document.getElementById('canvasDrop').classList.remove('drag');}
+function cdDrop(e){e.preventDefault();cdOff(e);const f=e.dataTransfer.files[0];if(f&&f.type.startsWith('image/'))loadPhoto(f);}
+function photoFile(e){const f=e.target.files[0];if(f)loadPhoto(f);}
+function loadPhoto(file){
+  const reader=new FileReader();
+  reader.onload=function(e){
+    imageBase64=e.target.result.split(',')[1];
+    imageType=file.type;
+
+    // Step 1: Show canvas immediately with a raw draw — no processing yet
+    // This makes the photo appear instantly while we set up in the background
+    const img=document.getElementById('canvasPhoto');
+    img.onload=function(){
+      originalImage=img;
+
+      // Wait one frame so layout is fully rendered before measuring frame size
+      requestAnimationFrame(() => {
+      const frameEl = document.getElementById('cframe');
+      const frameW = frameEl ? frameEl.offsetWidth  : window.innerWidth  - 280;
+      const frameH = frameEl ? frameEl.offsetHeight : window.innerHeight - 220;
+
+      // Device pixel ratio — on Retina/HiDPI screens this is 2 or 3.
+      // Multiply canvas pixel dimensions by DPR so 1 canvas pixel = 1 screen pixel.
+      // Without this the browser upscales and you see pixelation.
+      const dpr = Math.min(window.devicePixelRatio || 1, 2); // cap at 2x
+
+      // Display canvas size in CSS pixels — fill the frame
+      const cssW = frameW - 2;
+      const cssH = frameH - 2;
+      const scaleW = cssW / img.naturalWidth;
+      const scaleH = cssH / img.naturalHeight;
+      const cssScale = Math.min(1, scaleW, scaleH);
+      const displayCssW = Math.round(img.naturalWidth  * cssScale);
+      const displayCssH = Math.round(img.naturalHeight * cssScale);
+
+      // Actual canvas pixel dimensions = CSS size × DPR (sharp on retina)
+      const displayW = Math.round(displayCssW * dpr);
+      const displayH = Math.round(displayCssH * dpr);
+
+      // Size the canvas element in pixels
+      const cvs = document.getElementById('canvasOut');
+      cvs.width  = displayW;
+      cvs.height = displayH;
+      // Scale canvas back down to CSS size via style — this is what makes it sharp
+      cvs.style.width  = displayCssW + 'px';
+      cvs.style.height = displayCssH + 'px';
+      cvs.style.display = 'block';
+      document.getElementById('canvasDrop').style.display = 'none';
+
+      // Draw raw image instantly — appears on screen right away
+      const ctx = cvs.getContext('2d', {willReadFrequently:true});
+      ctx.drawImage(img, 0, 0, displayW, displayH);
+
+      // Build small drag-preview (CSS pixel size, no DPR needed — it's just for speed)
+      buildPreviewImage(img, displayCssW, displayCssH);
+
+      // Save clean-state snapshot so the very first edit can be undone
+      undoStack = [JSON.stringify(editVals)];
+      undoPointer = 0;
+      updateUndoBtn();
+
+      // Apply edits in next frame
+      requestAnimationFrame(() => renderCanvas(false));
+      }); // end requestAnimationFrame
+    };
+    img.src=e.target.result;
+
+    // Update UI state immediately — don't wait for img.onload
+    hasPhoto=true;
+    updateAnalyzeBtn();
+    const name=file.name;
+    document.getElementById('stFile').textContent=name.length>28?name.slice(0,26)+'…':name;
+    document.getElementById('stAI').textContent='';
+    document.getElementById('stExif').textContent=(file.size/1024/1024).toFixed(1)+' MB';
+
+    // Get dimensions from a throwaway image (cheap, no processing)
+    const dimImg=new Image();
+    dimImg.onload=()=>{
+      document.getElementById('stDims').textContent=dimImg.width+'×'+dimImg.height+' (orig)';
+    };
+    dimImg.src=e.target.result;
+
+    // Reset AI state
+    aiData=null;
+    removedDistracts=new Set();
+    document.getElementById('ai-no-photo').style.display='block';
+    document.getElementById('ai-thinking').style.display='none';
+    document.getElementById('ai-results').style.display='none';
+    document.getElementById('det-list').innerHTML='<div style="font-size:10.5px;color:var(--t2);padding:4px 0">Click AI tab → Analyze to detect segments</div>';
+    document.getElementById('dist-list').innerHTML='<div style="font-size:10.5px;color:var(--t2);padding:2px 0">No distractions detected yet</div>';
+    document.getElementById('segDetCount').textContent='0';
+    document.getElementById('distCount').textContent='0';
+    renderSegOverlays(); renderDistOverlays();
+    addToFilmstrip(file.name, e.target.result);
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── ANALYSIS ──────────────────────────────────────────────────
+const THINK_MSGS=['Checking exposure, highlights & shadows...','Evaluating white balance & color...','Assessing sharpness & noise...','Analyzing composition & framing...','Checking verticals & lens distortion...','Evaluating windows & glare...','Scanning for distractions & clutter...','Scoring against rubric...','Ranking recommendations by impact...'];
+
+const SYSTEM=`You are a professional real estate and architectural photography editor with 15 years of experience. You use a strict, consistent rubric every evaluation.
+SCORING RUBRIC:
+90-100: Exceptional, publication-ready. 80-89: Strong, ready for MLS with minor tweaks. 70-79: Good, a few improvements needed. 55-69: Acceptable, multiple issues. 40-54: Below standard, significant editing needed. 0-39: Unacceptable for professional use.
+MANDATORY CHECKLIST — evaluate ALL before scoring:
+1.EXPOSURE: overall brightness, blown highlights, crushed shadows
+2.WHITE BALANCE: warm/cool/green/magenta cast
+3.COLOR: saturation, accuracy
+4.SHARPNESS: focus, motion blur
+5.NOISE: grain especially in shadows
+6.COMPOSITION: rule of thirds, horizon level
+7.VERTICALS: keystoning, converging walls
+8.LENS DISTORTION: barrel/pincushion
+9.WINDOWS: blown out, glare, HDR need
+10.LIGHTING: quality, mixed color temps
+11.DISTRACTIONS: vents, speakers, sprinklers, smoke detectors, cords, clutter, outlets
+12.FLOORS/SURFACES: clean, scuffs, reflections
+13.OVERALL IMPACT: buyer impression`;
+
+const UPROMPT=`Analyze this real estate/architectural photo using the mandatory 13-point checklist. Return ONLY raw JSON — no markdown, no explanation:
+{"overall_score":<int 0-100>,"overall_title":"<4-6 words>","overall_summary":"<2 sentences: main strength then most important weakness>","top_priority":"<single most impactful edit in one sentence>","scores":[{"label":"Exposure","score":<int>,"note":"<12 words max>"},{"label":"White Balance","score":<int>,"note":"<12 words max>"},{"label":"Sharpness","score":<int>,"note":"<12 words max>"},{"label":"Composition","score":<int>,"note":"<12 words max>"},{"label":"Verticals","score":<int>,"note":"<12 words max>"},{"label":"Windows","score":<int>,"note":"<12 words max>"}],"detected_elements":["list every visible room element thoroughly"],"distractions":[{"name":"<distraction name>","location":"<where in frame>"}],"suggestions":[{"type":"good"|"warn"|"fix","text":"<specific observation>","impact":"high"|"medium"|"low"}],"edit_recommendations":[{"label":"<Lightroom setting>","value":"<precise value>","priority":"high"|"medium"|"low"}]}
+Rules: detected_elements = EVERYTHING visible. distractions = every one found or empty array. suggestions = ALL issues sorted high impact first, minimum 5. edit_recommendations = complete set minimum 8, covering Exposure/Highlights/Shadows/Whites/Blacks/Temp/Tint/Vibrance/Saturation/Clarity/Sharpness/Noise and any geometry corrections, sorted priority descending.`;
+
+async function runAnalysis(){
+  if(!hasKey||!hasPhoto)return;
+  // switch to AI tab
+  switchTabByKey('ai');
+  document.getElementById('ai-no-photo').style.display='none';
+  document.getElementById('ai-results').style.display='none';
+  document.getElementById('ai-thinking').style.display='flex';
+  document.getElementById('analyzeBtn').disabled=true;
+  let mi=0;
+  const ml=document.getElementById('ai-think-msg');
+  const iv=setInterval(()=>{ml.textContent=THINK_MSGS[mi%THINK_MSGS.length];mi++;},1400);
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':document.getElementById('apiKey').value.trim(),'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:2000,temperature:0,system:SYSTEM,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:imageType,data:imageBase64}},{type:'text',text:UPROMPT}]}]})
+    });
+    clearInterval(iv);
+    if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e?.error?.message||'API error '+resp.status);}
+    const data=await resp.json();
+    const raw=data.content.map(c=>c.text||'').join('');
+    aiData=JSON.parse(raw.replace(/```json|```/g,'').trim());
+    renderAIResults(aiData);
+  }catch(err){
+    clearInterval(iv);
+    document.getElementById('ai-thinking').style.display='none';
+    document.getElementById('ai-no-photo').style.display='block';
+    document.getElementById('ai-no-photo').innerHTML=`<strong style="color:var(--cor)">Analysis failed</strong>${err.message||'Unknown error'}<br><br><small>Check your API key and try again.</small>`;
+    document.getElementById('analyzeBtn').disabled=false;
+  }
+}
+
+function scCol(s){return s>=80?'var(--grn)':s>=55?'var(--amb)':'var(--cor)';}
+function prCol(p){return p==='high'?'var(--cor)':p==='medium'?'var(--amb)':'var(--t2)';}
+const SEG_COLORS=['#4f8ef7','#3dbab0','#f0a030','#9d6ef5','#38c172','#e8514a','#f0d030','#c87a3d','#e07cf0','#9898aa','#4f8ef7','#3dbab0','#f0a030','#9d6ef5','#38c172'];
+
+function renderAIResults(r){
+  document.getElementById('ai-thinking').style.display='none';
+  document.getElementById('ai-results').style.display='block';
+
+  // overall
+  const sc=Math.round(r.overall_score||0);
+  const col=scCol(sc);
+  const ring=document.getElementById('ai-ring');
+  ring.style.borderColor=col;
+  document.getElementById('ai-score-num').style.color=col;
+  document.getElementById('ai-score-num').textContent=sc;
+  document.getElementById('ai-title').textContent=r.overall_title||'';
+  document.getElementById('ai-sub').textContent=r.overall_summary||'';
+
+  // priority
+  if(r.top_priority){
+    document.getElementById('ai-priority-txt').textContent=r.top_priority;
+    document.getElementById('ai-priority').style.display='block';
+  }
+
+  // score cards
+  const sg=document.getElementById('ai-scores');sg.innerHTML='';
+  const ICONS={'Exposure':'☀','White Balance':'◑','Sharpness':'◎','Composition':'⬡','Verticals':'↕','Windows':'◫'};
+  (r.scores||[]).forEach(s=>{
+    const n=Math.round(s.score||0),c=scCol(n),ic=ICONS[s.label]||'◈';
+    sg.innerHTML+=`<div class="score-mini"><div class="score-mini-top"><span class="score-mini-lbl">${ic} ${s.label}</span><span class="score-mini-num" style="color:${c}">${n}</span></div><div class="score-mini-bar"><div class="score-mini-fill" style="width:${n}%;background:${c}"></div></div><div class="score-mini-note">${s.note||''}</div></div>`;
+  });
+
+  // suggestions
+  const sugs=r.suggestions||[];
+  document.getElementById('sug-count').textContent=sugs.length;
+  const sl=document.getElementById('ai-sugs');sl.innerHTML='';
+  const SBADGE={good:'✓ Good',warn:'⚠ Improve',fix:'✕ Fix'};
+  sugs.forEach(s=>{
+    const imp=s.impact?`<div class="sug-impact">Impact: <span>${s.impact}</span></div>`:'';
+    sl.innerHTML+=`<div class="sug-item ${s.type}"><span class="sug-badge ${s.type}">${SBADGE[s.type]||s.type}</span><div class="sug-body"><div class="sug-text">${s.text}</div>${imp}</div></div>`;
+  });
+
+  // recs
+  const recs=r.edit_recommendations||[];
+  document.getElementById('rec-count').textContent=recs.length;
+  const rl=document.getElementById('ai-recs');rl.innerHTML='';
+  recs.forEach(rec=>{
+    rl.innerHTML+=`<div class="rec-item"><div class="rec-dot" style="background:${prCol(rec.priority)}"></div><span class="rec-lbl">${rec.label}</span><span class="rec-val">${rec.value}</span></div>`;
+  });
+
+  // populate segments tab
+  populateSegments(r.detected_elements||[]);
+
+  // populate clean up tab
+  populateDistractions(r.distractions||[]);
+
+  // status bar
+  document.getElementById('stAI').textContent=`✦ AI score: ${sc}/100 · ${sugs.length} suggestions · ${recs.length} recs`;
+  document.getElementById('analyzeBtn').disabled=false;
+  document.getElementById('analyzeBtn').textContent='🧠 Analyze this photo with AI';
+}
+
+// ── POPULATE SEGMENTS ──────────────────────────────────────────
+const DEFAULT_SEGS=[{name:'Walls',color:'#4f8ef7'},{name:'Windows',color:'#3dbab0'},{name:'Floor',color:'#f0a030'},{name:'Ceiling',color:'#9d6ef5'},{name:'Doors',color:'#38c172'},{name:'Stairs',color:'#e8514a'},{name:'Lights',color:'#f0d030'},{name:'Wood trim',color:'#c87a3d'},{name:'Furniture',color:'#e07cf0'},{name:'Concrete',color:'#9898aa'}];
+
+function populateSegments(elements){
+  const dl=document.getElementById('det-list');
+  dl.innerHTML='';
+  document.getElementById('segDetCount').textContent=elements.length;
+  elements.slice(0,14).forEach((el,i)=>{
+    const col=SEG_COLORS[i%SEG_COLORS.length];
+    dl.innerHTML+=`<div class="det-row" onclick="selectSegFromList(this,'${el}','${col}')" id="dr${i}">
+      <div class="det-dot" style="background:${col}"></div>
+      <span class="det-lbl">${el}</span>
+      <span class="det-conf">${85+Math.floor(Math.random()*14)}%</span>
+      <span class="det-new">AI</span>
+    </div>`;
+  });
+  buildSegChips(elements);
+  if(segView)renderSegOverlays();
+}
+
+function buildSegChips(elements){
+  const el=document.getElementById('seg-chips');
+  el.innerHTML='';
+  const list=elements.length>0?elements.slice(0,10):DEFAULT_SEGS.map(s=>s.name);
+  list.forEach((name,i)=>{
+    const col=SEG_COLORS[i%SEG_COLORS.length];
+    const detected=elements.length>0;
+    el.innerHTML+=`<div class="seg-chip${detected?' ai-detected':''}" onclick="selectSegChip(this,'${name}','${col}')" id="sc${i}">
+      <div style="width:8px;height:8px;border-radius:50%;background:${col}"></div>
+      <span>${name}</span>
+    </div>`;
+  });
+}
+buildSegChips([]);
+
+function selectSegFromList(row,name,col){
+  document.querySelectorAll('.det-row').forEach(r=>r.classList.remove('sel'));
+  row.classList.add('sel');
+  setActiveSegment(name,col);
+}
+function selectSegChip(chip,name,col){
+  document.querySelectorAll('.seg-chip').forEach(c=>c.classList.remove('active'));
+  chip.classList.add('active');
+  setActiveSegment(name,col);
+}
+function setActiveSegment(name,col){
+  selectedSeg=name;
+  document.getElementById('seg-edit-lbl').textContent='Editing: '+name;
+  document.getElementById('seg-edit-lbl').style.color=col;
+  buildSliders('sl-seg',SLIDERS.seg_edit);
+  document.getElementById('lights-panel').style.display=name.toLowerCase().includes('light')?'block':'none';
+  if(name.toLowerCase().includes('light'))buildSliders('sl-light-shape',SLIDERS.light_shape);
+}
+
+// ── POPULATE DISTRACTIONS ──────────────────────────────────────
+function populateDistractions(distracts){
+  const dl=document.getElementById('dist-list');
+  document.getElementById('distCount').textContent=distracts.length;
+  if(distracts.length===0){
+    dl.innerHTML='<div style="font-size:11px;color:var(--grn);padding:6px 0">✓ No distractions detected in this photo</div>';
+    if(distView)renderDistOverlays();
+    return;
+  }
+  dl.innerHTML='';
+  distracts.forEach((d,i)=>{
+    const name=typeof d==='string'?d:d.name||d;
+    const loc=typeof d==='object'&&d.location?d.location:'';
+    dl.innerHTML+=`<div id="ditem${i}">
+      <div class="dist-item">
+        <span class="x">✕</span>
+        <div class="dist-body"><div class="dist-name">${name}</div>${loc?`<div class="dist-loc">${loc}</div>`:''}</div>
+        <button class="dist-rmv" id="drmv${i}" onclick="removeDistract(${i},'${name}')">Remove</button>
+      </div>
+      <div class="dist-strength">
+        <span class="ds-lbl">Intensity</span>
+        <div class="ds-trk" data-idx="${i}" onmousedown="startDS(event,this)">
+          <div class="ds-fill" id="dsf${i}" style="width:80%"></div>
+          <div class="ds-thumb" id="dst${i}" style="left:80%"></div>
+        </div>
+        <span class="ds-val" id="dsv${i}">80</span>
+      </div>
+    </div>`;
+  });
+  if(distView)renderDistOverlays();
+}
+
+function removeDistract(i,name){
+  removedDistracts.add(name);
+  const btn=document.getElementById('drmv'+i);
+  if(btn){btn.className='dist-rmv done';btn.textContent='Done';btn.disabled=true;}
+  renderDistOverlays();
+}
+
+// distraction strength drag
+let dragDS=null;
+function startDS(e,t){dragDS=t;updateDS(e);}
+document.addEventListener('mousemove',e=>{if(dragDS)updateDS(e);});
+// dragDS cleared in combined mouseup handler
+function updateDS(e){
+  if(!dragDS)return;
+  const r=dragDS.getBoundingClientRect();
+  const pct=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width));
+  const i=dragDS.dataset.idx;
+  const v=Math.round(pct*100);
+  document.getElementById('dsf'+i).style.width=v+'%';
+  document.getElementById('dst'+i).style.left=v+'%';
+  document.getElementById('dsv'+i).textContent=v;
+}
+
+// ── OVERLAYS ───────────────────────────────────────────────────
+const SEG_OV_POS=[{x:'8%',y:'20%',w:'34%',h:'55%'},{x:'55%',y:'15%',w:'30%',h:'40%'},{x:'10%',y:'78%',w:'80%',h:'14%'},{x:'5%',y:'5%',w:'90%',h:'9%'},{x:'43%',y:'35%',w:'14%',h:'50%'},{x:'72%',y:'60%',w:'18%',h:'28%'},{x:'25%',y:'8%',w:'8%',h:'11%'}];
+const DIST_OV_POS=[{x:'15%',y:'5%',w:'12%',h:'8%'},{x:'55%',y:'5%',w:'10%',h:'7%'},{x:'35%',y:'5%',w:'9%',h:'6%'},{x:'74%',y:'7%',w:'10%',h:'7%'}];
+
+function renderSegOverlays(){
+  const el=document.getElementById('segOverlays');
+  if(!segView||!aiData){el.innerHTML='';return;}
+  const elems=(aiData.detected_elements||[]).slice(0,7);
+  el.innerHTML=elems.map((e,i)=>{
+    const p=SEG_OV_POS[i]||{x:'5%',y:'5%',w:'20%',h:'20%'};
+    const col=SEG_COLORS[i%SEG_COLORS.length];
+    return `<div class="seg-ov" style="left:${p.x};top:${p.y};width:${p.w};height:${p.h};border-color:${col};background:${col}14" onclick="selectSegChip(document.getElementById('sc${i}'),'${e}','${col}')">
+      <span class="seg-ov-tag" style="background:${col}28;color:${col}">${e}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderDistOverlays(){
+  const el=document.getElementById('distOverlays');
+  if(!distView||!aiData){el.innerHTML='';return;}
+  const distracts=(aiData.distractions||[]).filter(d=>{
+    const n=typeof d==='string'?d:d.name||d;
+    return !removedDistracts.has(n);
+  });
+  el.innerHTML=distracts.slice(0,4).map((d,i)=>{
+    const p=DIST_OV_POS[i]||{x:'10%',y:'10%',w:'12%',h:'8%'};
+    const name=typeof d==='string'?d:d.name||d;
+    return `<div class="dist-ov" style="left:${p.x};top:${p.y};width:${p.w};height:${p.h}"><span class="dist-ov-tag">${name}</span></div>`;
+  }).join('');
+}
+
+function toggleSegView(){
+  segView=!segView;
+  document.getElementById('segBtn').classList.toggle('active',segView);
+  renderSegOverlays();
+}
+function toggleDistView(){
+  distView=!distView;
+  document.getElementById('dBtn').classList.toggle('active',distView);
+  renderDistOverlays();
+}
+
+// ── BEFORE/AFTER ───────────────────────────────────────────────
+function toggleSideBySide() {
+  sbsMode = !sbsMode;
+  const btn = document.getElementById('sbsBtn');
+  const wrap = document.getElementById('compareWrap');
+  const frame = document.getElementById('cframe');
+  btn.classList.toggle('active', sbsMode);
+  if (sbsMode) {
+    // Disable split mode if active
+    if (splitOn) toggleBA();
+    wrap.classList.add('active');
+    frame.style.display = 'none';
+    renderSideBySide();
+  } else {
+    wrap.classList.remove('active');
+    frame.style.display = '';
+    renderCanvas(false);
+  }
+}
+
+function renderSideBySide() {
+  if (!originalImage || !sbsMode) return;
+  const mainCvs = document.getElementById('canvasOut');
+  const W = mainCvs.width, H = mainCvs.height;
+
+  // BEFORE — original at display resolution, no processing needed
+  const bc = document.getElementById('beforeCanvas');
+  bc.width = W; bc.height = H;
+  bc.getContext('2d').drawImage(originalImage, 0, 0, W, H);
+
+  // AFTER — simply copy the already-processed main canvas (instant, free)
+  const ac = document.getElementById('afterCanvas');
+  ac.width = W; ac.height = H;
+  ac.getContext('2d').drawImage(mainCvs, 0, 0, W, H);
+}
+function toggleBA(){
+  splitOn=!splitOn;
+  if (splitOn && sbsMode) toggleSideBySide(); // turn off SBS if split enabled
+  document.getElementById('baBtn').classList.toggle('active',splitOn);
+  ['splitLine','beforeCover'].forEach(id=>document.getElementById(id).style.display=splitOn?'block':'none');
+  ['baLblB','baLblA'].forEach(id=>document.getElementById(id).style.display=splitOn?'block':'none');
+}
+
+// ── SLIDERS ────────────────────────────────────────────────────
+const SLIDERS={
+  tone:[['Exposure',0,-100,100],['Highlights',0,-100,100],['Shadows',0,-100,100],['Whites',0,-100,100],['Blacks',0,-100,100]],
+  presence:[['Clarity',0,0,100],['Texture',0,0,100],['Vibrance',0,0,100],['Saturation',0,-100,100],['Dehaze',0,0,100]],
+  detail:[['Sharpness',0,0,100],['Masking',0,0,100],['Noise Reduce',0,0,100],['Color Noise',0,0,100]],
+  wb:[['Temperature',0,-100,100],['Tint',0,-100,100]],
+  cmix:[
+    ['Red Hue',0,-100,100],['Red Sat',0,-100,100],['Red Lum',0,-100,100],
+    ['Orange Hue',0,-100,100],['Orange Sat',0,-100,100],['Orange Lum',0,-100,100],
+    ['Yellow Hue',0,-100,100],['Yellow Sat',0,-100,100],['Yellow Lum',0,-100,100],
+    ['Green Hue',0,-100,100],['Green Sat',0,-100,100],['Green Lum',0,-100,100],
+    ['Blue Hue',0,-100,100],['Blue Sat',0,-100,100],['Blue Lum',0,-100,100],
+  ],
+  re:[['Sky replacement',0,0,100],['Window glare',0,0,100],['HDR blend',0,0,100],['Floor clean',0,0,100],['Concrete clean',0,0,100],['Object removal',0,0,100],['Window brighten',0,0,100]],
+  auto:[['Color correct',0,0,100],['Lens correct',0,0,100],['Auto-straighten',0,0,100],['Vignette remove',0,0,100]],
+  seg_edit:[['Brightness',0,-100,100],['Contrast',0,-100,100],['Saturation',0,-100,100],['Warmth',0,-100,100],['Clarity',0,0,100]],
+  light_shape:[['Spread',0,0,100],['Softness',0,0,100],['Intensity',0,0,100],['Falloff',0,0,100],['Flare',0,0,100]],
+  geo:[['Vertical',0,-100,100],['Horizontal',0,-100,100],['Distortion',0,-100,100],['Vignette',0,-100,100]],
+  crop:[['Rotation',0,-45,45]],
+  cleanup:[['Dust & spots',0,0,100],['Noise blend',0,0,100],['Edge smooth',0,0,100]],
+};
+
+function buildSliders(containerId,rows,reStyle){
+  const el=document.getElementById(containerId);
+  if(!el)return;
+  el.innerHTML='';
+  rows.forEach(([label,val,min,max])=>{
+    const pct=Math.round(((val-min)/(max-min))*100);
+    const sid='sl_'+containerId+'_'+label.replace(/[\s\/]+/g,'_');
+    const disp=Number.isInteger(val)?(val>0?'+':'')+val:val.toFixed(1);
+    const fillCls=reStyle?'sfill sfill-re':'sfill';
+    el.innerHTML+=`<div class="srow">
+      <span class="slbl">${label}</span>
+      <div class="strk" data-min="${min}" data-max="${max}" data-id="${sid}" onmousedown="startDrag(event,this)">
+        <div class="${fillCls}" id="${sid}f" style="width:${pct}%"></div>
+        <div class="sthumb" id="${sid}t" style="left:${pct}%"></div>
+      </div>
+      <span class="snum" id="${sid}v">${disp}</span>
+    </div>`;
+  });
+}
+
+buildSliders('sl-tone',SLIDERS.tone);
+buildSliders('sl-presence',SLIDERS.presence);
+buildSliders('sl-detail',SLIDERS.detail);
+buildSliders('sl-wb',SLIDERS.wb);
+buildSliders('sl-cmix',SLIDERS.cmix);
+buildSliders('sl-re',SLIDERS.re,true);
+buildSliders('sl-auto',SLIDERS.auto);
+
+// ── Zone sliders ──
+const ZONE_SLIDERS = {
+  ceiling: [
+    ['Shadow fill',  0, 0, 100],
+    ['Warmth',       0, -100, 100],
+    ['Brightness',   0, -100, 100],
+    ['Blend',       60, 0, 100],
+  ],
+  edges: [
+    ['Shadow fill',  0, 0, 100],
+    ['Warmth',       0, -100, 100],
+    ['Desaturate',   0, 0, 100],
+    ['Blend',       50, 0, 100],
+  ],
+  walls: [
+    ['Brightness',   0, -100, 100],
+    ['Warmth',       0, -100, 100],
+    ['Saturation',   0, -100, 100],
+    ['Blend',       70, 0, 100],
+  ],
+  floor: [
+    ['Shadow fill',  0, 0, 100],
+    ['Warmth',       0, -100, 100],
+    ['Brightness',   0, -100, 100],
+    ['Blend',       55, 0, 100],
+  ],
+};
+
+// Zone defaults
+function buildZoneSliders(zone, rows) {
+  const cid = 'sl-zone-' + zone;
+  const el = document.getElementById(cid);
+  if (!el) return;
+  el.innerHTML = '';
+  rows.forEach(([label, val, min, max]) => {
+    const pct = Math.round(((val - min) / (max - min)) * 100);
+    const key = zone + '_' + label.toLowerCase().replace(/\s+/g,'_').replace('fill','Fill').replace('warmth','warmth').replace('brightness','brightness').replace('blend','blend').replace('desaturate','desaturate').replace('saturation','saturation');
+    // normalize key
+    const nkey = zone + '_' + label.toLowerCase().replace(/\s+/g,'');
+    const sid = 'slz_' + zone + '_' + label.replace(/\s+/g,'_');
+    const disp = val > 0 ? '+' + val : '' + val;
+    el.innerHTML += `<div class="srow">
+      <span class="slbl">${label}</span>
+      <div class="strk" data-min="${min}" data-max="${max}" data-id="${sid}" data-zone="${zone}" data-param="${label}" onmousedown="startDrag(event,this)">
+        <div class="sfill" id="${sid}f" style="width:${pct}%;background:var(--grn)"></div>
+        <div class="sthumb" id="${sid}t" style="left:${pct}%"></div>
+      </div>
+      <span class="snum" id="${sid}v">${disp}</span>
+    </div>`;
+  });
+}
+
+buildZoneSliders('ceiling', ZONE_SLIDERS.ceiling);
+buildZoneSliders('edges',   ZONE_SLIDERS.edges);
+buildZoneSliders('walls',   ZONE_SLIDERS.walls);
+buildZoneSliders('floor',   ZONE_SLIDERS.floor);
+buildSliders('sl-geo',SLIDERS.geo);
+buildSliders('sl-crop',SLIDERS.crop);
+buildSliders('sl-cleanup',SLIDERS.cleanup);
+
+let dragging=null;
+function startDrag(e,t){dragging=t;updateDrag(e);}
+document.addEventListener('mousemove',e=>{if(dragging)updateDrag(e);});
+// Note: dragging=null is handled in the mouseup listener below (after snapshot)
+function updateDrag(e){
+  if(!dragging)return;
+  const r=dragging.getBoundingClientRect();
+  const pct=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width));
+  const min=parseFloat(dragging.dataset.min),max=parseFloat(dragging.dataset.max);
+  const val=min+pct*(max-min);
+  const id=dragging.dataset.id;
+  const dp=Math.round(pct*100);
+  document.getElementById(id+'f').style.width=dp+'%';
+  document.getElementById(id+'t').style.left=dp+'%';
+  const disp=Number.isInteger(min)&&Number.isInteger(max)?(Math.round(val)>0?'+':'')+Math.round(val):val.toFixed(1);
+  document.getElementById(id+'v').textContent=disp;
+}
+
+// ── ACCORDION ────────────────────────────────────────────────
+function toggleAccordion(key) {
+  const body   = document.getElementById('acc-body-' + key);
+  const header = body?.previousElementSibling;
+  if (!body || !header) return;
+  const isOpen = header.classList.contains('open');
+  if (isOpen) {
+    header.classList.remove('open');
+    body.style.display = 'none';
+  } else {
+    header.classList.add('open');
+    body.style.display = 'block';
+  }
+}
+
+function switchAccordion(key) {
+  // Open a specific accordion and scroll it into view
+  const body   = document.getElementById('acc-body-' + key);
+  const header = body?.previousElementSibling;
+  if (!body || !header) return;
+  header.classList.add('open');
+  body.style.display = 'block';
+  // Scroll right panel to this section
+  const rpb = document.getElementById('rpanel-body');
+  if (rpb) {
+    const sec = document.getElementById('acc-' + key);
+    if (sec) rpb.scrollTop = sec.offsetTop;
+  }
+}
+
+function addCollection() {
+  const name = prompt('Collection name:');
+  if (!name) return;
+  const container = document.querySelector('.tree-add-btn').parentElement;
+  const btn = document.querySelector('.tree-add-btn');
+  const item = document.createElement('div');
+  item.className = 'tree-item';
+  item.innerHTML = `<span class="tree-icon">📁</span>${name}`;
+  container.insertBefore(item, btn);
+}
+function switchTab(el,key){
+  const keyMap={basic:"tone",color:"wb",re:"re",seg:"seg",clean:"clean",ai:"ai",geo:"geo"};
+  switchAccordion(keyMap[key]||key);
+}
+function switchTabByKey(key){
+  const keyMap={basic:"tone",color:"wb",re:"re",seg:"seg",clean:"clean",ai:"ai",geo:"geo"};
+  switchAccordion(keyMap[key]||key);
+}
+
+
+// ── FILMSTRIP ──────────────────────────────────────────────────
+const DEMO_THUMBS=[
+  {emoji:'🛋',label:'IMG_0043',star:false,bg:'linear-gradient(135deg,#1a140a,#2a200e)'},
+  {emoji:'🌿',label:'IMG_0044',star:true,bg:'linear-gradient(135deg,#0d1a0d,#152a15)'},
+  {emoji:'🛁',label:'IMG_0045',star:false,bg:'linear-gradient(135deg,#0e0e1e,#181830)'},
+  {emoji:'🪵',label:'IMG_0046',star:false,bg:'linear-gradient(135deg,#1a1008,#2a180c)'},
+  {emoji:'🏗',label:'IMG_0047',star:true,bg:'linear-gradient(135deg,#0d1014,#192028)'},
+];
+
+function buildFilmstrip(){
+  const el=document.getElementById('filmScroll');
+  el.innerHTML='';
+  DEMO_THUMBS.forEach((d,i)=>{
+    el.innerHTML+=`<div class="fthumb" id="ft${i}" onclick="thumbClick(event,${i})">
+      <div class="fthumb-img" style="background:${d.bg};display:flex;align-items:center;justify-content:center;font-size:22px">${d.emoji}</div>
+      <div class="fthumb-chk">✓</div>
+      <span class="fthumb-num">${d.label}</span>
+      ${d.star?'<span class="fthumb-star">★</span>':''}
+    </div>`;
+  });
+}
+buildFilmstrip();
+
+// Track filenames already in the strip to prevent duplicates
+const filmstripNames = new Set();
+
+function addToFilmstrip(name, src){
+  // If this exact filename was just added, skip — prevents double-fire from
+  // multiple click handlers both triggering the same file input
+  if(filmstripNames.has(name)){
+    filmstripNames.delete(name); // allow re-adding same file next time
+    return;
+  }
+  filmstripNames.add(name);
+  // Clear the flag after a short delay so the same file can be re-loaded later
+  setTimeout(()=>filmstripNames.delete(name), 2000);
+
+  const el=document.getElementById('filmScroll');
+  const idx=Date.now();
+  const div=document.createElement('div');
+  div.className='fthumb active';
+  div.id='ftu'+idx;
+  div.innerHTML=`<img src="${src}" class="fthumb-img" style="object-fit:cover"><div class="fthumb-chk">✓</div><span class="fthumb-num">${name.slice(0,8)}</span>`;
+  div.onclick=function(e){thumbClick(e,idx);};
+  document.querySelectorAll('.fthumb').forEach(t=>t.classList.remove('active'));
+  el.insertBefore(div,el.firstChild);
+}
+
+function thumbClick(e,i){
+  if(e.shiftKey||e.ctrlKey||e.metaKey){
+    const id='ft'+i;const el=document.getElementById(id)||document.getElementById('ftu'+i);
+    if(selectedThumbs.has(i)){selectedThumbs.delete(i);el&&el.classList.remove('selected');}
+    else{selectedThumbs.add(i);el&&el.classList.add('selected');}
+  }else{
+    selectedThumbs.clear();
+    document.querySelectorAll('.fthumb').forEach(t=>t.classList.remove('selected','active'));
+    const el=document.getElementById('ft'+i)||document.getElementById('ftu'+i);
+    el&&el.classList.add('active');
+  }
+  updateSelUI();
+}
+function updateSelUI(){
+  const n=selectedThumbs.size;
+  const badge=document.getElementById('bulkBadge');
+  const info=document.getElementById('filmSel');
+  const btn=document.getElementById('syncBtn');
+  if(n>0){badge.style.display='block';badge.textContent=n+' selected';info.textContent=n+' photo'+(n>1?'s':'')+' selected';btn.disabled=false;}
+  else{badge.style.display='none';info.textContent='';btn.disabled=true;}
+}
+function selAll(){DEMO_THUMBS.forEach((_,i)=>{selectedThumbs.add(i);const el=document.getElementById('ft'+i);el&&el.classList.add('selected');});updateSelUI();}
+function clrSel(){selectedThumbs.clear();document.querySelectorAll('.fthumb').forEach(t=>t.classList.remove('selected'));updateSelUI();}
+function syncEdits(){alert('Syncing edits to '+selectedThumbs.size+' photos — this feature will apply current develop settings to all selected photos.');}
+
+// ── MISC ───────────────────────────────────────────────────────
+// ── REAL ZOOM ─────────────────────────────────────────────────
+let zoomLevel = 1.0; // 1.0 = fit to frame
+let panX = 0, panY = 0;
+let isPanning = false, panStart = null;
+
+function adjZoom(delta) {
+  const step = delta > 0 ? 0.25 : -0.25;
+  zoomLevel = Math.max(0.25, Math.min(8, zoomLevel + step));
+  if (zoomLevel <= 1) { panX = 0; panY = 0; } // reset pan when zoomed out
+  applyZoom();
+}
+
+function applyZoom() {
+  const cvs = document.getElementById('canvasOut');
+  if (!cvs) return;
+  const pct = Math.round(zoomLevel * 100);
+  document.getElementById('zpct').textContent = pct + '%';
+  const rot = editVals.rotation || 0;
+  // Update rotation readout
+  const ro = document.getElementById('rotReadout');
+  if (ro) ro.textContent = rot.toFixed(1) + '°';
+  // Scale up slightly when rotated to avoid black corner gaps
+  const rotRad = rot * Math.PI / 180;
+  const rotCompensate = rot !== 0
+    ? 1 / (Math.abs(Math.cos(rotRad)) + Math.abs(Math.sin(rotRad))) * 1.02
+    : 1;
+  const totalScale = zoomLevel * rotCompensate;
+  cvs.style.transform = `scale(${totalScale.toFixed(4)}) translate(${panX}px,${panY}px)${rot !== 0 ? ` rotate(${rot}deg)` : ''}`;
+  cvs.style.transformOrigin = 'center center';
+  cvs.style.cursor = cropActive ? 'crosshair' : zoomLevel > 1 ? (isPanning ? 'grabbing' : 'grab') : 'crosshair';
+}
+
+// Override renderCanvas rotation to use applyZoom so they don't conflict
+// Pan with mouse drag when zoomed in
+document.addEventListener('DOMContentLoaded', () => {
+  const cvs = document.getElementById('canvasOut');
+  if (!cvs) return;
+
+  // Mouse wheel zoom
+  document.getElementById('cframe')?.addEventListener('wheel', e => {
+    e.preventDefault();
+    const delta = e.deltaY < 0 ? 1 : -1;
+    adjZoom(delta);
+  }, {passive:false});
+
+  // Pan when zoomed in
+  cvs.addEventListener('mousedown', e => {
+    if (zoomLevel <= 1 || cropActive) return;
+    isPanning = true;
+    panStart = { x: e.clientX - panX, y: e.clientY - panY };
+    cvs.style.cursor = 'grabbing';
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', e => {
+    if (!isPanning || !panStart) return;
+    panX = e.clientX - panStart.x;
+    panY = e.clientY - panStart.y;
+    applyZoom();
+  });
+  document.addEventListener('mouseup', () => {
+    if (isPanning) {
+      isPanning = false;
+      const cvs = document.getElementById('canvasOut');
+      if (cvs) cvs.style.cursor = zoomLevel > 1 ? 'grab' : 'crosshair';
+    }
+  });
+});
+function setShape(btn,name){
+  document.querySelectorAll('.shape-btn').forEach(b=>{
+    b.style.borderColor='var(--border2)';b.style.background='var(--bg3)';b.style.color='var(--t2)';
+  });
+  btn.style.borderColor='rgba(240,160,48,.35)';btn.style.background='rgba(240,160,48,.08)';btn.style.color='var(--amb)';
+}
+function setChip(t){document.getElementById('aiInp').value=t;document.getElementById('aiInp').focus();}
+function runAIEdit(){const v=document.getElementById('aiInp').value.trim();if(v)alert('AI edit: "'+v+'"\n\nThis will be processed by the AI edit assistant in the next build.');}
+document.getElementById('aiInp').addEventListener('keydown',e=>{if(e.key==='Enter')runAIEdit();});
+
+// histogram
+function buildHist(id){
+  const el=document.getElementById(id);if(!el)return;
+  const cols=['#2a3a55','#3a4a72','#4a5a90','#6a7aaa','#8a9acc'];
+  [5,8,14,22,32,42,35,26,20,14,12,10,16,26,34,38,34,24,14,7,4].forEach((h,i)=>{
+    el.innerHTML+=`<div class="hb" style="height:${h}px;background:${cols[Math.min(i,cols.length-1)]}"></div>`;
+  });
+}
+
+// ── IMAGE PROCESSING ENGINE ────────────────────────────────────
+let originalImage = null;
+// Downscaled version for fast preview during drag
+let previewImage = null;
+const PREVIEW_W = 900; // max width for preview render
+
+const PARAM_MAP = {
+  'Exposure':'exposure','Highlights':'highlights','Shadows':'shadows',
+  'Whites':'whites','Blacks':'blacks',
+  'Clarity':'clarity','Texture':'texture','Vibrance':'vibrance',
+  'Saturation':'saturation','Dehaze':'dehaze',
+  'Sharpness':'sharpness','Masking':'masking',
+  'Noise Reduce':'noiseReduce','Color Noise':'colorNoise',
+  'Temperature':'temperature','Tint':'tint',
+  'Vignette':'vignette',
+  'Rotation':'rotation',
+  'Red Hue':'redHue','Red Sat':'redSat','Red Lum':'redLum',
+  'Orange Hue':'orangeHue','Orange Sat':'orangeSat','Orange Lum':'orangeLum',
+  'Yellow Hue':'yellowHue','Yellow Sat':'yellowSat','Yellow Lum':'yellowLum',
+  'Green Hue':'greenHue','Green Sat':'greenSat','Green Lum':'greenLum',
+  'Blue Hue':'blueHue','Blue Sat':'blueSat','Blue Lum':'blueLum',
+};
+
+// Default values — match slider defaults in SLIDERS object
+const DEFAULTS = {
+  // All tone controls — zero means untouched
+  exposure:0, highlights:0, shadows:0, whites:0, blacks:0,
+  clarity:0, texture:0, vibrance:0, saturation:0, dehaze:0,
+  sharpness:0, masking:0, noiseReduce:0, colorNoise:0,
+  temperature:0, tint:0,
+  vignette:0,
+  rotation:0,
+  // Color mix — all zero, no changes on load
+  redHue:0, redSat:0, redLum:0,
+  orangeHue:0, orangeSat:0, orangeLum:0,
+  yellowHue:0, yellowSat:0, yellowLum:0,
+  greenHue:0, greenSat:0, greenLum:0,
+  blueHue:0, blueSat:0, blueLum:0,
+};
+const editVals = {...DEFAULTS};
+
+// Zone correction defaults — must be after editVals
+const ZONE_DEFAULTS = {
+  ceiling_shadowfill:0, ceiling_warmth:0, ceiling_brightness:0, ceiling_blend:60,
+  edges_shadowfill:0,   edges_warmth:0,   edges_desaturate:0,   edges_blend:50,
+  walls_brightness:0,   walls_warmth:0,   walls_saturation:0,   walls_blend:70,
+  floor_shadowfill:0,   floor_warmth:0,   floor_brightness:0,   floor_blend:55,
+};
+Object.assign(editVals, ZONE_DEFAULTS);
+
+// Group → params mapping for reset buttons
+const RESET_GROUPS = {
+  tone:       ['exposure','highlights','shadows','whites','blacks'],
+  presence:   ['clarity','texture','vibrance','saturation','dehaze'],
+  detail:     ['sharpness','masking','noiseReduce','colorNoise'],
+  wb:         ['temperature','tint'],
+  cmix:       ['redHue','redSat','redLum','orangeHue','orangeSat','orangeLum',
+               'yellowHue','yellowSat','yellowLum','greenHue','greenSat','greenLum',
+               'blueHue','blueSat','blueLum'],
+  geo:        ['vignette'],
+  crop:       ['rotation'],
+};
+// Slider container id → group key
+const CONTAINER_GROUP = {
+  'sl-tone':'tone','sl-presence':'presence','sl-detail':'detail',
+  'sl-wb':'wb','sl-cmix':'cmix','sl-geo':'geo','sl-crop':'crop',
+};
+
+// ── Performance: preview during drag, full-res on release ──────
+let renderPending = false;
+let fullRenderTimer = null;
+
+function schedulePreviewRender() {
+  if (!originalImage) return;
+  if (!renderPending) {
+    renderPending = true;
+    requestAnimationFrame(() => {
+      renderCanvas(true); // fast preview
+      renderPending = false;
+    });
+  }
+  // Schedule full-res render 120ms after last drag move
+  clearTimeout(fullRenderTimer);
+  fullRenderTimer = setTimeout(() => {
+    renderCanvas(false); // full quality
+  }, 120);
+}
+
+function renderCanvas(previewMode = false) {
+  if (!originalImage) return;
+  const cvs = document.getElementById('canvasOut');
+  const ctx = cvs.getContext('2d', { willReadFrequently: true });
+  const W = cvs.width, H = cvs.height;
+  const ev = editVals; // shorthand for all post-loop ops
+
+  // In preview (drag) mode: draw from small preview canvas scaled up — very fast
+  // In full mode: draw from originalImage at full canvas pixel resolution — sharp
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = previewMode ? 'medium' : 'high';
+  if (previewMode && previewImage) {
+    ctx.drawImage(previewImage, 0, 0, W, H);
+  } else {
+    ctx.drawImage(originalImage, 0, 0, W, H);
+  }
+
+  const imgData = ctx.getImageData(0, 0, W, H);
+  processPixels(imgData.data, W, H);
+  ctx.putImageData(imgData, 0, 0);
+
+  // ── Texture — fine detail contrast via high-frequency layer ──
+  // Blend a contrast-boosted version over the image at low opacity
+  // Targets fine surface detail without affecting broad tonal areas
+  if (!previewMode && ev.texture > 0) {
+    const texStr = ev.texture / 100 * 0.35;
+    ctx.save();
+    ctx.filter = 'contrast(1.0) blur(0.4px)';
+    ctx.globalCompositeOperation = 'overlay';
+    ctx.globalAlpha = texStr;
+    ctx.drawImage(cvs, 0, 0);
+    ctx.restore();
+    ctx.filter = 'none';
+  }
+
+  // ── Sharpness — unsharp mask using blur + subtract technique ──
+  // Create a blurred version, then boost difference = edges sharpened
+  if (!previewMode && ev.sharpness > 0) {
+    const sharpStr = ev.sharpness / 100;
+    // Masking: how much to protect flat areas (higher = sharpen only edges)
+    const maskProt = (ev.masking || 40) / 100;
+    const blurRadius = 0.6 + maskProt * 0.8;
+    const sharpAmt = sharpStr * (1 - maskProt * 0.4);
+    ctx.save();
+    ctx.filter = `blur(${blurRadius.toFixed(1)}px)`;
+    ctx.globalCompositeOperation = 'source-over';
+    // Draw blurred version to temp canvas
+    const tmp = document.createElement('canvas');
+    tmp.width = W; tmp.height = H;
+    const tctx = tmp.getContext('2d');
+    tctx.drawImage(cvs, 0, 0);
+    tctx.filter = `blur(${blurRadius.toFixed(1)}px)`;
+    tctx.drawImage(cvs, 0, 0);
+    // Overlay unsharpened layer at negative alpha for unsharp mask effect
+    ctx.globalCompositeOperation = 'hard-light';
+    ctx.globalAlpha = sharpAmt * 0.18;
+    ctx.drawImage(tmp, 0, 0);
+    ctx.restore();
+  }
+
+  // ── Noise reduction blur ──
+  // ── Noise reduction (luminance) — gentle blur on full render
+  if (!previewMode && ev.noiseReduce > 0) {
+    const blurAmt = (ev.noiseReduce / 100) * 1.2;
+    ctx.filter = `blur(${blurAmt.toFixed(2)}px)`;
+    ctx.drawImage(cvs, 0, 0);
+    ctx.filter = 'none';
+  }
+
+  // ── Color noise reduction — desaturate only the finest detail
+  // Applies a very slight saturation reduction in shadow areas
+  // where color noise is most visible, without affecting overall color
+  if (!previewMode && ev.colorNoise > 0) {
+    const cnStr = ev.colorNoise / 100;
+    const cnData = ctx.getImageData(0, 0, W, H);
+    const cnd = cnData.data;
+    for (let i = 0; i < cnd.length; i += 4) {
+      const lum = cnd[i]*0.299 + cnd[i+1]*0.587 + cnd[i+2]*0.114;
+      // Only affects dark areas (lum < 100) where color noise lives
+      const shadowStr = Math.max(0, (100 - lum) / 100) * cnStr * 0.6;
+      if (shadowStr > 0.01) {
+        cnd[i]   = Math.round(cnd[i]   * (1 - shadowStr) + lum * shadowStr);
+        cnd[i+1] = Math.round(cnd[i+1] * (1 - shadowStr) + lum * shadowStr);
+        cnd[i+2] = Math.round(cnd[i+2] * (1 - shadowStr) + lum * shadowStr);
+      }
+    }
+    ctx.putImageData(cnData, 0, 0);
+  }
+
+  // ── Vignette — radial gradient darkening from edges inward ──
+  if (ev.vignette !== 0) {
+    const cx = W / 2, cy = H / 2;
+    const radius = Math.sqrt(cx * cx + cy * cy);
+    const grad = ctx.createRadialGradient(cx, cy, radius * 0.4, cx, cy, radius * 1.1);
+    const strength = Math.abs(ev.vignette) / 100;
+    if (ev.vignette < 0) {
+      // Standard dark vignette
+      grad.addColorStop(0, 'rgba(0,0,0,0)');
+      grad.addColorStop(1, `rgba(0,0,0,${(strength * 0.75).toFixed(2)})`);
+    } else {
+      // Brightening vignette (rare but useful)
+      grad.addColorStop(0, 'rgba(0,0,0,0)');
+      grad.addColorStop(1, `rgba(255,255,255,${(strength * 0.5).toFixed(2)})`);
+    }
+    ctx.save();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  }
+
+  // Rotation + Zoom — applied together via applyZoom
+  applyZoom();
+
+  // Refresh side-by-side if active
+  if (sbsMode) renderSideBySide();
+
+  // Before/after split
+  if (splitOn) refreshSplitOverlay();
+  // Histogram
+  updateLiveHistogram(ctx, W, H);
+}
+
+function processPixels(d, W, H) {
+  const ev = editVals;
+
+  // ── LUT: Tone adjustments ──────────────────────────────────
+  // Each adjustment is isolated so it only affects its intended tonal range.
+  const lut = new Uint8ClampedArray(256);
+  for (let i = 0; i < 256; i++) {
+    let v = i / 255;
+
+    // EXPOSURE — pure linear luminosity scale, no channel divergence.
+    // Uses a gentle highlight rolloff (soft knee) so bright areas don't
+    // clip and go milky. No haze introduced because all channels scale equally.
+    if (ev.exposure !== 0) {
+      const gain = Math.pow(2, ev.exposure / 50);
+      // Soft knee: full gain in midtones, gradually roll off at top
+      const knee = 0.85;
+      if (v < knee) {
+        v = v * gain;
+      } else {
+        // Soft rolloff above knee — prevents highlight clipping/milkiness
+        const overKnee = (v - knee) / (1 - knee);
+        const kneeGained = knee * gain;
+        const softOver = overKnee * overKnee * (1 - kneeGained) + kneeGained;
+        v = kneeGained + (softOver - kneeGained) * overKnee;
+      }
+    }
+
+    // WHITES — lifts only the very bright end (top 30%)
+    if (ev.whites !== 0) {
+      const zone = Math.max(0, v - 0.70) / 0.30;
+      v += (ev.whites / 100) * zone * zone * 0.30;
+    }
+
+    // BLACKS — deepens only the dark end (bottom 30%)
+    if (ev.blacks !== 0) {
+      const zone = Math.max(0, 0.30 - v) / 0.30;
+      v += (ev.blacks / 100) * zone * zone * 0.30;
+    }
+
+    // HIGHLIGHTS — pulls down only the top half, strongest near 100%
+    if (ev.highlights !== 0) {
+      const zone = Math.pow(Math.max(0, v - 0.50) / 0.50, 2);
+      v += (ev.highlights / 100) * zone * 0.45;
+    }
+
+    // SHADOWS — lifts only the bottom half, strongest near 0%
+    if (ev.shadows !== 0) {
+      const zone = Math.pow(Math.max(0, 0.50 - v) / 0.50, 2);
+      v += (ev.shadows / 100) * zone * 0.45;
+    }
+
+    lut[i] = Math.min(255, Math.max(0, Math.round(v * 255)));
+  }
+
+  // ── Clarity — midtone contrast S-curve ──────────────────────
+  // Operates purely on luminosity curve, no color shift.
+  const cAmt = ev.clarity / 100 * 0.26;
+  const cLut = new Uint8ClampedArray(256);
+  for (let i = 0; i < 256; i++) {
+    let v = i / 255 - 0.5;
+    v += cAmt * v * (1 - v * v * 4);
+    cLut[i] = Math.min(255, Math.max(0, Math.round((v + 0.5) * 255)));
+  }
+
+  // ── DEHAZE LUT — dark-point lift + local contrast ───────────
+  // Works by raising the minimum level of low-value pixels (lifting the
+  // black/shadow floor where haze accumulates) and tightening contrast
+  // in the midtones. Completely separate from the saturation pipeline.
+  // Colors are preserved — only luminosity is adjusted.
+  const dhAmt = ev.dehaze / 100;
+  const dhLut = new Uint8ClampedArray(256);
+  for (let i = 0; i < 256; i++) {
+    let v = i / 255;
+    if (dhAmt > 0) {
+      // Lift the dark floor (where haze sits) — strongest in shadows/midtones
+      const darkLift = dhAmt * 0.18 * (1 - v) * (1 - v);
+      // Add midtone contrast to restore punch lost to haze
+      const midContrast = dhAmt * 0.14 * Math.sin(v * Math.PI);
+      v = v - darkLift + midContrast;
+      // Slight gamma correction to prevent overall darkening
+      v = v + dhAmt * 0.04 * (0.5 - v);
+    }
+    dhLut[i] = Math.min(255, Math.max(0, Math.round(v * 255)));
+  }
+
+  const tempShift = ev.temperature / 100 * 26;
+  const tintShift = ev.tint / 100 * 13;
+  const satMul    = 1 + (ev.saturation / 100) * 0.9;
+  const vibAmt    = ev.vibrance / 100 * 0.7;
+
+  // Pre-compute colorMixActive flag — skip loop if all zero (performance)
+  const colorMixActive = [
+    ev.redHue, ev.redSat, ev.redLum,
+    ev.orangeHue, ev.orangeSat, ev.orangeLum,
+    ev.yellowHue, ev.yellowSat, ev.yellowLum,
+    ev.greenHue, ev.greenSat, ev.greenLum,
+    ev.blueHue, ev.blueSat, ev.blueLum,
+  ].some(v => v !== 0);
+
+  for (let i = 0; i < d.length; i += 4) {
+    // Step 1: Apply tone LUT (exposure, highlights, shadows, whites, blacks)
+    let r = lut[d[i]], g = lut[d[i+1]], b = lut[d[i+2]];
+
+    // Step 2: Clarity (luminosity curve only — apply equally to all channels)
+    r = cLut[r]; g = cLut[g]; b = cLut[b];
+
+    // Step 3: Dehaze (luminosity only — apply equally to all channels so no
+    // color cast is introduced, colors are untouched)
+    if (ev.dehaze > 0) {
+      r = dhLut[r]; g = dhLut[g]; b = dhLut[b];
+    }
+
+    // Step 4: White balance (channel-specific, intentional color shift)
+    r = Math.min(255, Math.max(0, r + tempShift));
+    b = Math.min(255, Math.max(0, b - tempShift));
+    g = Math.min(255, Math.max(0, g + tintShift));
+
+    // Step 5: Saturation + Vibrance in HSL — completely isolated from
+    // exposure and dehaze so those tools can't bleed into color
+    if (ev.saturation !== 0 || ev.vibrance !== 0) {
+      const [h, s, l] = rgbToHsl(r, g, b);
+      let ns = s * satMul;
+      if (ev.vibrance !== 0) ns += vibAmt * (1 - ns);
+      ns = Math.min(1, Math.max(0, ns));
+      const [nr, ng, nb] = hslToRgb(h, ns, l);
+      r = nr; g = ng; b = nb;
+    }
+
+    // Step 6: Color Mix — target specific hue ranges independently
+    // Each channel (Red/Orange/Yellow/Green/Blue) can shift hue, sat, lum
+    if (colorMixActive) {
+      const [h, s, l] = rgbToHsl(r, g, b);
+      const hDeg = h * 360; // 0-360
+
+      // Define hue ranges for each color band
+      // Each entry: [centerHue, halfWidth, hueParam, satParam, lumParam]
+      const bands = [
+        [  0, 30, ev.redHue,    ev.redSat,    ev.redLum],    // Red
+        [ 30, 22, ev.orangeHue, ev.orangeSat, ev.orangeLum], // Orange
+        [ 52, 18, ev.yellowHue, ev.yellowSat, ev.yellowLum], // Yellow
+        [120, 40, ev.greenHue,  ev.greenSat,  ev.greenLum],  // Green
+        [210, 40, ev.blueHue,   ev.blueSat,   ev.blueLum],   // Blue/Cyan
+        [330, 30, ev.redHue,    ev.redSat,    ev.redLum],    // Red wrap-around
+      ];
+
+      let nh = h, ns = s, nl = l;
+      for (const [center, hw, dHue, dSat, dLum] of bands) {
+        // Angular distance to center of this band
+        let dist = Math.abs(hDeg - center);
+        if (dist > 180) dist = 360 - dist;
+        if (dist < hw) {
+          // Smooth falloff: strongest at center, zero at edge
+          const str = Math.pow(1 - dist / hw, 1.5);
+          nh = ((nh * 360 + dHue / 100 * 15 * str) / 360 + 1) % 1;
+          ns = Math.min(1, Math.max(0, ns * (1 + dSat / 100 * str)));
+          nl = Math.min(1, Math.max(0, nl + dLum / 100 * 0.25 * str));
+        }
+      }
+      if (nh !== h || ns !== s || nl !== l) {
+        const [nr, ng, nb] = hslToRgb(nh, ns, nl);
+        r = nr; g = ng; b = nb;
+      }
+    }
+
+    d[i] = r; d[i+1] = g; d[i+2] = b;
+
+    // ── UNIFY ROOM: zone-based correction ──────────────────────
+    const row = Math.floor((i / 4) / W);
+    const col = (i / 4) % W;
+    const yPct = row / H;
+    const xPct = col / W;
+
+    // ── Zone masks — mutually exclusive, feathered edges ───────
+    // Ceiling: top 25%, fades out over next 8% — never overlaps walls
+    const ceilRaw  = yPct < 0.25 ? 1 : yPct < 0.33 ? 1 - (yPct - 0.25) / 0.08 : 0;
+    // Floor: bottom 20%, fades in over preceding 8%
+    const floorRaw = yPct > 0.80 ? 1 : yPct > 0.72 ? (yPct - 0.72) / 0.08 : 0;
+    // Walls: strictly between ceiling and floor zones, no overlap
+    const wallRaw  = (1 - ceilRaw) * (1 - floorRaw);
+
+    // Edge proximity (left/right borders only, not top/bottom which are ceiling/floor)
+    const edgeRaw = Math.max(
+      Math.max(0, 0.14 - xPct) / 0.14,   // left border
+      Math.max(0, xPct - 0.86) / 0.14    // right border
+    );
+    // Edges only apply within the wall zone — not into ceiling or floor
+    const edgeMaskOnly = edgeRaw * wallRaw;
+
+    const blendC = (ev.ceiling_blend || 60) / 100;
+    const blendE = (ev.edges_blend   || 50) / 100;
+    const blendW = (ev.walls_blend   || 70) / 100;
+    const blendF = (ev.floor_blend   || 55) / 100;
+
+    const ceilMask  = ceilRaw  * blendC;
+    const floorMask = floorRaw * blendF;
+    const edgeMask  = edgeMaskOnly * blendE;
+    // Wall mask excludes edge columns so edge corrections don't double-apply
+    const wallMask  = wallRaw * (1 - edgeRaw) * blendW;
+
+    let zr = d[i], zg = d[i+1], zb = d[i+2];
+
+    // Helper: apply warmth shift to rgb
+    function applyWarmth(r, g, b, warmth, strength) {
+      if (warmth === 0) return [r, g, b];
+      // Increased multiplier from 22→45 so corrections are clearly visible
+      const w = warmth / 100 * 45 * strength;
+      return [
+        Math.min(255, Math.max(0, r + w)),
+        g,
+        Math.min(255, Math.max(0, b - w * 0.75))
+      ];
+    }
+    function applyBrightness(r, g, b, br, strength) {
+      if (br === 0) return [r, g, b];
+      // Increased multiplier from 40→70
+      const add = br / 100 * 70 * strength;
+      return [Math.min(255,Math.max(0,r+add)), Math.min(255,Math.max(0,g+add)), Math.min(255,Math.max(0,b+add))];
+    }
+    function applyShadowFill(r, g, b, fill, strength) {
+      if (fill === 0) return [r, g, b];
+      const lum = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
+      // Broader shadow detection (was 2.5, now 1.8) so it lifts more of the darker areas
+      const shadowStr = Math.max(0, 1 - lum * 1.8);
+      // Increased multiplier from 55→90
+      const lift = fill / 100 * 90 * strength * shadowStr;
+      return [Math.min(255,Math.max(0,r+lift)), Math.min(255,Math.max(0,g+lift)), Math.min(255,Math.max(0,b+lift))];
+    }
+
+    // ── Ceiling zone ──
+    if (ceilMask > 0.01) {
+      [zr,zg,zb] = applyShadowFill(zr,zg,zb, ev.ceiling_shadowfill||0, ceilMask);
+      [zr,zg,zb] = applyWarmth(zr,zg,zb, ev.ceiling_warmth||0, ceilMask);
+      [zr,zg,zb] = applyBrightness(zr,zg,zb, ev.ceiling_brightness||0, ceilMask);
+    }
+
+    // ── Edge/border zone ──
+    if (edgeMask > 0.01) {
+      [zr,zg,zb] = applyShadowFill(zr,zg,zb, ev.edges_shadowfill||0, edgeMask);
+      [zr,zg,zb] = applyWarmth(zr,zg,zb, ev.edges_warmth||0, edgeMask);
+      // Desaturate edges
+      if ((ev.edges_desaturate||0) > 0) {
+        const lum2 = zr*0.299 + zg*0.587 + zb*0.114;
+        const ds = (ev.edges_desaturate||0) / 100 * edgeMask * 0.7;
+        zr = Math.round(zr*(1-ds) + lum2*ds);
+        zg = Math.round(zg*(1-ds) + lum2*ds);
+        zb = Math.round(zb*(1-ds) + lum2*ds);
+      }
+    }
+
+    // ── Walls zone ──
+    if (wallMask > 0.01) {
+      [zr,zg,zb] = applyBrightness(zr,zg,zb, ev.walls_brightness||0, wallMask);
+      [zr,zg,zb] = applyWarmth(zr,zg,zb, ev.walls_warmth||0, wallMask);
+      if ((ev.walls_saturation||0) !== 0) {
+        const [zh,zs,zl] = rgbToHsl(zr,zg,zb);
+        const ns2 = Math.min(1,Math.max(0, zs * (1 + (ev.walls_saturation||0)/100*wallMask)));
+        const [nr2,ng2,nb2] = hslToRgb(zh,ns2,zl);
+        zr=nr2; zg=ng2; zb=nb2;
+      }
+    }
+
+    // ── Floor zone ──
+    if (floorMask > 0.01) {
+      [zr,zg,zb] = applyShadowFill(zr,zg,zb, ev.floor_shadowfill||0, floorMask);
+      [zr,zg,zb] = applyWarmth(zr,zg,zb, ev.floor_warmth||0, floorMask);
+      [zr,zg,zb] = applyBrightness(zr,zg,zb, ev.floor_brightness||0, floorMask);
+    }
+
+    d[i] = zr; d[i+1] = zg; d[i+2] = zb;
+  }
+}
+
+// ── HSL helpers ──────────────────────────────────────────────
+function rgbToHsl(r,g,b){
+  r/=255;g/=255;b/=255;
+  const max=Math.max(r,g,b),min=Math.min(r,g,b);
+  let h,s,l=(max+min)/2;
+  if(max===min){h=s=0;}
+  else{const d=max-min;s=l>0.5?d/(2-max-min):d/(max+min);
+    switch(max){case r:h=((g-b)/d+(g<b?6:0))/6;break;case g:h=((b-r)/d+2)/6;break;case b:h=((r-g)/d+4)/6;break;}}
+  return[h,s,l];
+}
+function hslToRgb(h,s,l){
+  if(s===0){const v=Math.round(l*255);return[v,v,v];}
+  const q=l<0.5?l*(1+s):l+s-l*s,p=2*l-q;
+  const hue2=(p,q,t)=>{if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p;};
+  return[Math.round(hue2(p,q,h+1/3)*255),Math.round(hue2(p,q,h)*255),Math.round(hue2(p,q,h-1/3)*255)];
+}
+
+// ── Before/After: draw original into split overlay ────────────
+function refreshSplitOverlay() {
+  const cvs = document.getElementById('canvasOut');
+  const line = document.getElementById('splitLine');
+  const cover = document.getElementById('beforeCover');
+  if (!line || !cover || !originalImage) return;
+
+  // Get split position as percentage of displayed canvas width
+  const pct = parseFloat(line.style.left) || 50;
+  const displayW = cvs.offsetWidth;   // CSS display width
+  const displayH = cvs.offsetHeight;  // CSS display height
+  const splitPx = displayW * pct / 100;
+
+  // Size the cover to match the CSS display size of the canvas exactly
+  // Use an <img> tag as child so the browser handles scaling naturally
+  cover.style.width = splitPx + 'px';
+  cover.style.height = displayH + 'px';
+  cover.style.overflow = 'hidden';
+  cover.style.position = 'absolute';
+  cover.style.top = '0';
+  cover.style.left = '0';
+  cover.style.backdropFilter = 'none';
+  cover.style.background = 'none';
+
+  // Create or reuse an img element inside the cover
+  let img = cover.querySelector('img.before-img');
+  if (!img) {
+    img = document.createElement('img');
+    img.className = 'before-img';
+    img.style.cssText = `
+      position:absolute;top:0;left:0;
+      width:${displayW}px;height:${displayH}px;
+      object-fit:contain;pointer-events:none;
+    `;
+    cover.appendChild(img);
+  }
+  // Always match display dimensions
+  img.style.width = displayW + 'px';
+  img.style.height = displayH + 'px';
+  img.src = originalImage.src;
+}
+
+// Make split line draggable — prevent browser text-selection highlight
+document.addEventListener('DOMContentLoaded', () => {
+  const line = document.getElementById('splitLine');
+  if (!line) return;
+  let draggingLine = false;
+  line.addEventListener('mousedown', e => {
+    draggingLine = true;
+    e.stopPropagation();
+    e.preventDefault(); // prevents browser text-selection (blue highlight)
+    document.body.style.userSelect = 'none'; // belt-and-suspenders
+    document.body.style.webkitUserSelect = 'none';
+  });
+  document.addEventListener('mousemove', e => {
+    if (!draggingLine) return;
+    e.preventDefault();
+    const frame = document.getElementById('cframe');
+    const rect = frame.getBoundingClientRect();
+    const pct = Math.max(5, Math.min(95, (e.clientX - rect.left) / rect.width * 100));
+    line.style.left = pct + '%';
+    document.getElementById('beforeCover').style.width = (pct / 100 * frame.offsetWidth) + 'px';
+    if (splitOn) refreshSplitOverlay();
+  });
+  document.addEventListener('mouseup', () => {
+    draggingLine = false;
+    document.body.style.userSelect = '';
+    document.body.style.webkitUserSelect = '';
+  });
+});
+
+// ── Live histogram ────────────────────────────────────────────
+function updateLiveHistogram(ctx, W, H) {
+  const sample = ctx.getImageData(0, 0, Math.min(W, 300), Math.min(H, 200));
+  const d = sample.data;
+  const bins = new Array(21).fill(0);
+  for (let i = 0; i < d.length; i += 4) {
+    const lum = Math.min(20, Math.round((d[i]*0.299+d[i+1]*0.587+d[i+2]*0.114)/255*20));
+    bins[lum]++;
+  }
+  const mx = Math.max(1, ...bins);
+  ['hist1','hist2','hist1b'].forEach(id => {
+    const el = document.getElementById(id); if (!el) return;
+    el.querySelectorAll('.hb').forEach((bar, i) => {
+      bar.style.height = (Math.round(bins[i]/mx*34)+2) + 'px';
+    });
+  });
+}
+
+// ── Build preview image on load ───────────────────────────────
+function buildPreviewImage(img, cssW, cssH) {
+  // Drag preview — kept small so slider dragging is always fast.
+  // Uses CSS pixel dimensions (not DPR) — we don't need retina quality during drag.
+  const DRAG_MAX = 500;
+  const scale = Math.min(1, DRAG_MAX / (cssW || img.naturalWidth));
+  const pw = Math.round((cssW || img.naturalWidth)  * scale);
+  const ph = Math.round((cssH || img.naturalHeight) * scale);
+  const tmp = document.createElement('canvas');
+  tmp.width = pw; tmp.height = ph;
+  tmp.getContext('2d').drawImage(img, 0, 0, pw, ph);
+  previewImage = tmp;
+}
+
+// ── Override updateDrag: fast preview + full on release ───────
+function updateDrag(e) {
+  if (!dragging) return;
+  const rect = dragging.getBoundingClientRect();
+  const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  const min = parseFloat(dragging.dataset.min), max = parseFloat(dragging.dataset.max);
+  const val = min + pct * (max - min);
+  const id = dragging.dataset.id;
+  const dp = Math.round(pct * 100);
+  document.getElementById(id + 'f').style.width = dp + '%';
+  document.getElementById(id + 't').style.left = dp + '%';
+  const rounded = (Number.isInteger(min) && Number.isInteger(max)) ? Math.round(val) : parseFloat(val.toFixed(1));
+  document.getElementById(id + 'v').textContent = (rounded > 0 ? '+' : '') + rounded;
+
+  // Map to param and trigger render — basic sliders
+  const m = id.match(/sl_sl-(?:tone|presence|detail|wb|cmix|geo|crop)_(.+)$/);
+  if (m) {
+    const param = PARAM_MAP[m[1].replace(/_/g, ' ')];
+    if (param !== undefined) {
+      editVals[param] = rounded;
+      schedulePreviewRender();
+    }
+  }
+
+  // Zone sliders: id starts with slz_
+  const mz = id.match(/^slz_(\w+)_(.+)$/);
+  if (mz) {
+    const zone = mz[1];
+    const label = mz[2].replace(/_/g,' ').toLowerCase().replace(' ', '');
+    // build key e.g. ceiling_shadowfill, edges_warmth
+    const key = zone + '_' + label.replace(/\s/g,'');
+    editVals[key] = rounded;
+    schedulePreviewRender();
+  }
+}
+
+// Full-res render on mouseup + snapshot for undo
+document.addEventListener('mouseup', () => {
+  const wasDragging = dragging !== null;
+  const wasDraggingDS = dragDS !== null;
+  dragging = null;
+  dragDS = null;
+  if (wasDragging || wasDraggingDS) {
+    clearTimeout(fullRenderTimer);
+    snapshotForUndo();
+    setTimeout(() => renderCanvas(false), 50);
+  }
+});
+
+// Cmd+Z / Ctrl+Z keyboard shortcut
+document.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+    e.preventDefault();
+    undoEdit();
+  }
+});
+
+// ── RESET BUTTONS ─────────────────────────────────────────────
+// Wire each reset span to its group
+function resetGroup(groupKey) {
+  const params = RESET_GROUPS[groupKey];
+  if (!params) return;
+  params.forEach(param => {
+    editVals[param] = DEFAULTS[param];
+  });
+  // Rebuild the slider UI for that container
+  const containerId = Object.keys(CONTAINER_GROUP).find(k => CONTAINER_GROUP[k] === groupKey);
+  if (containerId) {
+    const key = containerId.replace('sl-', '');
+    const sliderKey = {
+      tone:'tone', presence:'presence', detail:'detail', wb:'wb', cmix:'cmix'
+    }[key];
+    if (sliderKey) buildSliders(containerId, SLIDERS[sliderKey]);
+    // Re-wire reset button for this container
+    wireResetBtn(containerId, groupKey);
+  }
+  renderCanvas(false);
+}
+
+function wireResetBtn(containerId, groupKey) {
+  // Find the reset span in the same pview as this container
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const pview = container.closest('.pview');
+  if (!pview) return;
+  const resets = pview.querySelectorAll('.sreset');
+  resets.forEach(btn => {
+    btn.onclick = () => resetGroup(groupKey);
+    btn.style.cursor = 'pointer';
+  });
+}
+
+// Wire all reset buttons on load
+setTimeout(() => {
+  Object.entries(CONTAINER_GROUP).forEach(([cid, grp]) => wireResetBtn(cid, grp));
+}, 200);
+
+buildHist('hist1'); buildHist('hist2');
+// Also build the mini histogram in the Tone accordion
+function buildMiniHist(id){
+  const el=document.getElementById(id);
+  if(!el)return;
+  const cols=['#2a3a55','#3a4a72','#4a5a90','#6a7aaa','#8a9acc'];
+  [5,8,14,22,32,38,32,24,18,12,10,9,14,22,30,34,30,22,12,6,3].forEach((h,i)=>{
+    el.innerHTML+=`<div class="hb" style="height:${h}px;background:${cols[Math.min(i,cols.length-1)]}"></div>`;
+  });
+}
+buildMiniHist('hist1b');
+
+// ── WHITE BALANCE EYEDROPPER ──────────────────────────────────
+let wbDropperActive = false;
+
+function toggleWBDropper() {
+  if (!hasPhoto) {
+    showWBStatus('Load a photo first.', 'warn'); return;
+  }
+  wbDropperActive = !wbDropperActive;
+  const btn = document.getElementById('wbDropperBtn');
+  const cvs = document.getElementById('canvasOut');
+  const loupe = document.getElementById('wbLoupe');
+
+  if (wbDropperActive) {
+    btn.style.background = 'rgba(79,142,247,.15)';
+    btn.style.borderColor = 'rgba(79,142,247,.4)';
+    btn.style.color = 'var(--acc)';
+    btn.textContent = '💧 Click a white or grey area…';
+    cvs.classList.add('wb-dropper-active');
+    showWBStatus('Click on any area that should be pure white or neutral grey — a white wall, white ceiling tile, or white trim works best.', 'info');
+  } else {
+    resetDropperUI();
+  }
+}
+
+function resetDropperUI() {
+  wbDropperActive = false;
+  const btn = document.getElementById('wbDropperBtn');
+  if (btn) {
+    btn.style.background = '';
+    btn.style.borderColor = '';
+    btn.style.color = '';
+    btn.textContent = '💧 Eyedropper — click a neutral area';
+  }
+  const cvs = document.getElementById('canvasOut');
+  if (cvs) cvs.classList.remove('wb-dropper-active');
+  const loupe = document.getElementById('wbLoupe');
+  if (loupe) loupe.style.display = 'none';
+}
+
+function showWBStatus(msg, type) {
+  const el = document.getElementById('wbStatus');
+  if (!el) return;
+  el.style.display = 'block';
+  const colors = {
+    info:  {bg:'rgba(79,142,247,.08)',  border:'rgba(79,142,247,.25)',  color:'var(--t1)'},
+    good:  {bg:'rgba(56,193,114,.08)',  border:'rgba(56,193,114,.25)',  color:'var(--grn)'},
+    warn:  {bg:'rgba(240,160,48,.08)',  border:'rgba(240,160,48,.25)',  color:'var(--amb)'},
+    error: {bg:'rgba(232,81,74,.08)',   border:'rgba(232,81,74,.25)',   color:'var(--cor)'},
+  };
+  const c = colors[type] || colors.info;
+  el.style.background = c.bg;
+  el.style.borderColor = c.border;
+  el.style.color = c.color;
+  el.textContent = msg;
+}
+
+// Attach canvas mouse events for eyedropper
+document.addEventListener('DOMContentLoaded', () => {
+  const cvs = document.getElementById('canvasOut');
+  const loupe = document.getElementById('wbLoupe');
+  const loupeCanvas = document.getElementById('wbLoupeCanvas');
+  const swatchEl = document.getElementById('wbSwatch');
+  if (!cvs) return;
+
+  cvs.addEventListener('mousemove', e => {
+    if (!wbDropperActive) return;
+    const rect = cvs.getBoundingClientRect();
+    const cssX = e.clientX - rect.left;
+    const cssY = e.clientY - rect.top;
+    const scaleX = cvs.width  / rect.width;
+    const scaleY = cvs.height / rect.height;
+    const px = Math.round(cssX * scaleX);
+    const py = Math.round(cssY * scaleY);
+
+    // Show loupe — position offset from cursor so it doesn't cover the click point
+    loupe.style.display = 'block';
+    const lx = cssX + 20;
+    const ly = cssY - 100;
+    loupe.style.left = Math.max(0, Math.min(rect.width  - 80, lx)) + 'px';
+    loupe.style.top  = Math.max(0, Math.min(rect.height - 80, ly)) + 'px';
+
+    // Draw 8×8 pixel region magnified into loupe canvas
+    const ctx2 = loupeCanvas.getContext('2d');
+    ctx2.imageSmoothingEnabled = false;
+    const mainCtx = cvs.getContext('2d', {willReadFrequently:true});
+    const patchSize = 8;
+    const srcX = Math.max(0, px - Math.floor(patchSize/2));
+    const srcY = Math.max(0, py - Math.floor(patchSize/2));
+    const patch = mainCtx.getImageData(srcX, srcY, patchSize, patchSize);
+    const tmpC = document.createElement('canvas');
+    tmpC.width = patchSize; tmpC.height = patchSize;
+    tmpC.getContext('2d').putImageData(patch, 0, 0);
+    ctx2.clearRect(0, 0, 80, 80);
+    ctx2.drawImage(tmpC, 0, 0, 80, 80);
+
+    // Sample the center pixel for swatch display
+    const centerPatch = mainCtx.getImageData(px, py, 1, 1).data;
+    const rr = centerPatch[0], gg = centerPatch[1], bb = centerPatch[2];
+    const hex = '#' + [rr,gg,bb].map(v=>v.toString(16).padStart(2,'0')).join('');
+    swatchEl.textContent = hex.toUpperCase();
+    swatchEl.style.background = hex;
+    swatchEl.style.padding = '1px 4px';
+    swatchEl.style.borderRadius = '2px';
+    // Contrast text color
+    const lum2 = rr*0.299 + gg*0.587 + bb*0.114;
+    swatchEl.style.color = lum2 > 128 ? '#000' : '#fff';
+  });
+
+  cvs.addEventListener('mouseleave', () => {
+    if (loupe) loupe.style.display = 'none';
+  });
+
+  cvs.addEventListener('click', e => {
+    if (!wbDropperActive) return;
+    const rect = cvs.getBoundingClientRect();
+    const scaleX = cvs.width  / rect.width;
+    const scaleY = cvs.height / rect.height;
+    const px = Math.round((e.clientX - rect.left)  * scaleX);
+    const py = Math.round((e.clientY - rect.top)   * scaleY);
+
+    // Sample a 5×5 region around the click point and average
+    const ctx3 = cvs.getContext('2d', {willReadFrequently:true});
+    const sampleSize = 5;
+    const sx = Math.max(0, px - 2);
+    const sy = Math.max(0, py - 2);
+    const sample = ctx3.getImageData(sx, sy, sampleSize, sampleSize).data;
+    let sumR=0, sumG=0, sumB=0, count=0;
+    for (let i=0; i<sample.length; i+=4) {
+      sumR += sample[i]; sumG += sample[i+1]; sumB += sample[i+2]; count++;
+    }
+    const avgR = sumR/count, avgG = sumG/count, avgB = sumB/count;
+    const avgLum = avgR*0.299 + avgG*0.587 + avgB*0.114;
+
+    if (avgLum < 30) {
+      showWBStatus('That area is too dark — try clicking a brighter neutral like a white wall or ceiling.', 'warn');
+      return;
+    }
+    if (avgLum < 80) {
+      showWBStatus('That area may be too dark for accurate WB. Results may vary — try a brighter neutral area.', 'warn');
+    }
+
+    // Calculate correction:
+    // Temperature: how much warmer/cooler is R vs B relative to neutral?
+    // Tint: how much green/magenta deviation?
+    const neutralTarget = avgLum;
+    const rDiff = neutralTarget - avgR; // positive = R too low = scene is cool
+    const bDiff = neutralTarget - avgB; // positive = B too low = scene is warm
+    const gDiff = neutralTarget - avgG;
+
+    // Map R-B diff to Temperature slider (-100 to 100)
+    // Positive rDiff - bDiff = cool scene, needs warming = positive temp
+    const tempAdj = Math.max(-100, Math.min(100, Math.round((rDiff - bDiff) * 1.8)));
+    // Map G diff to Tint slider (-100 to 100)
+    // Positive gDiff = G too low = magenta cast = negative tint
+    const tintAdj = Math.max(-100, Math.min(100, Math.round(-gDiff * 1.4)));
+
+    // Apply to editVals
+    snapshotForUndo();
+    editVals.temperature = tempAdj;
+    editVals.tint = tintAdj;
+
+    // Rebuild WB sliders to show new values
+    buildSliders('sl-wb', [
+      ['Temperature', tempAdj, -100, 100],
+      ['Tint', tintAdj, -100, 100],
+    ]);
+    renderCanvas(false);
+
+    const hex2 = '#' + [avgR,avgG,avgB].map(v=>Math.round(v).toString(16).padStart(2,'0')).join('');
+    showWBStatus(
+      `Sampled ${hex2.toUpperCase()} · Temp ${tempAdj>0?'+':''}${tempAdj} · Tint ${tintAdj>0?'+':''}${tintAdj} · Applied ✓`,
+      'good'
+    );
+    resetDropperUI();
+  });
+});
+
+// ── AI AUTO WHITE BALANCE ─────────────────────────────────────
+async function runAutoWB() {
+  if (!hasPhoto) { showWBStatus('Load a photo first.', 'warn'); return; }
+  if (!hasKey)   { showWBStatus('Paste your API key at the top first.', 'warn'); return; }
+
+  const btn = document.getElementById('wbAutoBtn');
+  btn.textContent = '🧠 Analyzing…';
+  btn.disabled = true;
+  showWBStatus('AI is identifying neutral reference areas in the photo…', 'info');
+
+  const prompt = `You are an expert photographer and colorist specializing in real estate photography.
+
+Analyze this photo's white balance carefully. Look for:
+- White or near-white surfaces: white walls, white ceiling tiles, white trim, white doors
+- Neutral grey surfaces: grey carpet, concrete, stainless steel
+- Any color cast: warm (orange/yellow), cool (blue), green, or magenta
+
+Return ONLY a raw JSON object, no markdown:
+{
+  "cast": "<brief description of the color cast you see, e.g. 'slight warm orange cast from tungsten lights'>",
+  "neutral_areas": ["<list of surfaces that appear neutral or near-white in this photo>"],
+  "temperature": <integer -100 to 100, positive=warmer correction needed, negative=cooler>,
+  "tint": <integer -100 to 100, positive=magenta correction, negative=green correction>,
+  "confidence": "high"|"medium"|"low",
+  "reasoning": "<one sentence explaining your recommendation>"
+}
+
+Be precise. Real estate photos often have mixed tungsten+daylight lighting. Focus on finding the most neutral white/grey surface and correcting to true neutral.`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': document.getElementById('apiKey').value.trim(),
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 400,
+        temperature: 0,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: imageType, data: imageBase64 }},
+            { type: 'text',  text: prompt }
+          ]
+        }]
+      })
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(()=>({}));
+      throw new Error(err?.error?.message || 'API error ' + resp.status);
+    }
+
+    const data = await resp.json();
+    const raw = data.content.map(c=>c.text||'').join('');
+    const result = JSON.parse(raw.replace(/```json|```/g,'').trim());
+
+    const temp = Math.max(-100, Math.min(100, Math.round(result.temperature || 0)));
+    const tint = Math.max(-100, Math.min(100, Math.round(result.tint || 0)));
+
+    snapshotForUndo();
+    editVals.temperature = temp;
+    editVals.tint = tint;
+
+    buildSliders('sl-wb', [
+      ['Temperature', temp, -100, 100],
+      ['Tint', tint, -100, 100],
+    ]);
+    renderCanvas(false);
+
+    const castInfo = result.cast ? `${result.cast}. ` : '';
+    const areas = result.neutral_areas?.join(', ') || '';
+    showWBStatus(
+      `${castInfo}Temp ${temp>0?'+':''}${temp} · Tint ${tint>0?'+':''}${tint} · ${result.confidence} confidence.\n${result.reasoning || ''}`,
+      'good'
+    );
+
+  } catch(err) {
+    showWBStatus('AI error: ' + (err.message || 'Try again.'), 'error');
+  } finally {
+    btn.textContent = '🧠 AI Auto White Balance';
+    btn.disabled = false;
+  }
+}
+
+// ── MASTER RESET ──────────────────────────────────────────────
+function confirmMasterReset() {
+  if (!hasPhoto) return;
+  // Show a non-blocking inline confirm inside the canvas area
+  const existing = document.getElementById('resetConfirm');
+  if (existing) { existing.remove(); return; }
+
+  const box = document.createElement('div');
+  box.id = 'resetConfirm';
+  box.style.cssText = `
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    background:var(--bg2);border:1px solid rgba(232,81,74,.4);
+    border-radius:var(--rl);padding:20px 24px;z-index:200;
+    text-align:center;min-width:240px;
+    box-shadow:0 8px 32px rgba(0,0,0,.6);
+  `;
+  box.innerHTML = `
+    <div style="font-size:14px;font-weight:500;color:var(--t0);margin-bottom:8px">Reset all edits?</div>
+    <div style="font-size:11.5px;color:var(--t1);margin-bottom:18px;line-height:1.5">
+      This will reset every slider to zero and restore<br>the original unedited photo.<br>
+      <span style="color:var(--t2);font-size:10.5px">This cannot be undone.</span>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:center">
+      <button onclick="document.getElementById('resetConfirm').remove()"
+        style="padding:7px 18px;border-radius:var(--r);font-size:12px;font-weight:500;
+        border:1px solid var(--border2);background:var(--bg3);color:var(--t1);
+        cursor:pointer;font-family:var(--font)">Cancel</button>
+      <button onclick="masterReset();document.getElementById('resetConfirm').remove()"
+        style="padding:7px 18px;border-radius:var(--r);font-size:12px;font-weight:500;
+        border:none;background:var(--cor);color:#fff;
+        cursor:pointer;font-family:var(--font)">Reset all edits</button>
+    </div>
+  `;
+
+  // Append to canvas main so it floats over the photo
+  const canvasMain = document.getElementById('canvasMain');
+  canvasMain.style.position = 'relative';
+  canvasMain.appendChild(box);
+}
+
+function masterReset() {
+  // 1. Reset all edit values to defaults
+  Object.keys(DEFAULTS).forEach(k => { editVals[k] = DEFAULTS[k]; });
+  Object.keys(ZONE_DEFAULTS).forEach(k => { editVals[k] = ZONE_DEFAULTS[k]; });
+
+  // 2. Reset rotation and straighten
+  straightenAngle = 0;
+  editVals.rotation = 0;
+  zoomLevel = 1;
+  panX = 0; panY = 0;
+
+  // 3. Rebuild all slider UIs to show zero values
+  rebuildAllSliders();
+
+  // 4. Reset undo stack — nothing to undo after a full reset
+  undoStack = [];
+  undoPointer = -1;
+  updateUndoBtn();
+
+  // 5. Cancel crop if active
+  if (cropActive) resetCrop();
+
+  // 6. Turn off split and compare modes
+  if (splitOn) toggleBA();
+  if (sbsMode) toggleSideBySide();
+
+  // 7. Re-render the photo with all defaults
+  renderCanvas(false);
+
+  // 8. Flash the Reset All button briefly to confirm
+  const btn = document.getElementById('masterResetBtn');
+  if (btn) {
+    btn.textContent = '✓ Reset done';
+    btn.style.color = 'var(--grn)';
+    setTimeout(() => {
+      btn.textContent = '⊘ Reset all';
+      btn.style.color = 'var(--cor)';
+    }, 1800);
+  }
+}
+
+// ── STRAIGHTEN DIAL ───────────────────────────────────────────
+let straightenAngle = 0;      // current rotation in degrees (-45 to +45)
+let dialDragStartX = null;
+let dialDragStartAngle = null;
+const STRAIGHTEN_MAX = 45;
+const DEG_PER_PX = 0.15;      // how many degrees per pixel dragged
+
+function buildDialTicks() {
+  const g = document.getElementById('dialTicks');
+  if (!g) return;
+  g.innerHTML = '';
+  // Draw tick marks from -45 to +45 deg, spaced every 5 degrees
+  // The dial offset shifts based on current angle
+  const totalRange = STRAIGHTEN_MAX * 2;
+  const pxPerDeg = 200 / 30; // visible range is ~30 degrees at a time
+  for (let deg = -STRAIGHTEN_MAX; deg <= STRAIGHTEN_MAX; deg++) {
+    const isMajor = deg % 5 === 0;
+    const isMid   = deg % 5 === 0 && deg !== 0;
+    // Position relative to center, offset by current angle
+    const x = 100 + (deg - straightenAngle) * pxPerDeg;
+    if (x < 0 || x > 200) continue;
+    const tickH = isMajor ? 20 : 10;
+    const y1 = 24 - tickH / 2;
+    const y2 = 24 + tickH / 2;
+    const color = Math.abs(deg - straightenAngle) < 0.5
+      ? 'rgba(255,255,255,.9)'
+      : isMajor ? 'rgba(255,255,255,.45)' : 'rgba(255,255,255,.18)';
+    g.innerHTML += `<line x1="${x.toFixed(1)}" y1="${y1}" x2="${x.toFixed(1)}" y2="${y2}"
+      stroke="${color}" stroke-width="${isMajor?1.5:0.8}" stroke-linecap="round"/>`;
+    if (isMajor) {
+      g.innerHTML += `<text x="${x.toFixed(1)}" y="46" text-anchor="middle"
+        fill="rgba(255,255,255,.3)" font-size="7" font-family="DM Mono,monospace">${deg}</text>`;
+    }
+  }
+}
+
+function startStraightenDrag(e) {
+  e.preventDefault();
+  dialDragStartX = e.clientX;
+  dialDragStartAngle = straightenAngle;
+  document.addEventListener('mousemove', onStraightenDrag);
+  document.addEventListener('mouseup', endStraightenDrag);
+}
+
+function startStraightenTouch(e) {
+  dialDragStartX = e.touches[0].clientX;
+  dialDragStartAngle = straightenAngle;
+  document.addEventListener('touchmove', onStraightenTouchMove, {passive:false});
+  document.addEventListener('touchend', endStraightenDrag);
+}
+
+function onStraightenDrag(e) {
+  const dx = e.clientX - dialDragStartX;
+  updateStraightenAngle(dx);
+}
+
+function onStraightenTouchMove(e) {
+  e.preventDefault();
+  const dx = e.touches[0].clientX - dialDragStartX;
+  updateStraightenAngle(dx);
+}
+
+function updateStraightenAngle(dx) {
+  const raw = dialDragStartAngle + dx * DEG_PER_PX;
+  straightenAngle = Math.max(-STRAIGHTEN_MAX, Math.min(STRAIGHTEN_MAX, raw));
+  straightenAngle = Math.round(straightenAngle * 10) / 10; // 0.1° precision
+  buildDialTicks();
+  const ro = document.getElementById('straightenReadout');
+  if (ro) ro.textContent = (straightenAngle >= 0 ? '+' : '') + straightenAngle.toFixed(1) + '°';
+  // Apply rotation to canvas and auto-shrink crop rect to hide corners
+  applyStraighten();
+}
+
+function endStraightenDrag() {
+  dialDragStartX = null;
+  document.removeEventListener('mousemove', onStraightenDrag);
+  document.removeEventListener('mouseup', endStraightenDrag);
+  document.removeEventListener('touchmove', onStraightenTouchMove);
+  document.removeEventListener('touchend', endStraightenDrag);
+}
+
+function applyStraighten() {
+  editVals.rotation = straightenAngle;
+  applyZoom(); // rotate photo underneath
+  // Recalculate safe crop rect and redraw fixed overlay on top
+  if (cropActive) {
+    autoFitCropToRotation();
+    // Use requestAnimationFrame so the CSS transform has settled before we measure
+    requestAnimationFrame(() => drawCropOverlay());
+  }
+}
+
+function autoFitCropToRotation() {
+  // When image is rotated by `a` degrees, the largest axis-aligned rectangle
+  // that fits inside it shrinks. Calculate the maximum safe crop box.
+  const cvs = document.getElementById('canvasOut');
+  if (!cvs) return;
+  const W = cvs.width, H = cvs.height;
+  const rad = Math.abs(straightenAngle) * Math.PI / 180;
+  if (rad < 0.001) {
+    // No rotation — allow full canvas minus small pad
+    const pad = Math.round(Math.min(W, H) * 0.03);
+    cropRect = { x:pad, y:pad, w:W-pad*2, h:H-pad*2 };
+    return;
+  }
+  // Largest rectangle inside a rotated rectangle formula
+  // (Cychosz 1994 / common CV formula)
+  const sinA = Math.abs(Math.sin(rad));
+  const cosA = Math.abs(Math.cos(rad));
+  let safeW, safeH;
+  if (W / H > 1) {
+    // Landscape
+    safeW = (H * cosA - W * sinA) / (cosA * cosA - sinA * sinA);
+    safeH = safeW * H / W;
+  } else {
+    safeH = (W * cosA - H * sinA) / (cosA * cosA - sinA * sinA);
+    safeW = safeH * W / H;
+  }
+  // Clamp to canvas bounds with small safety margin
+  safeW = Math.max(40, Math.min(W * 0.98, safeW * 0.97));
+  safeH = Math.max(40, Math.min(H * 0.98, safeH * 0.97));
+  cropRect = {
+    x: Math.round((W - safeW) / 2),
+    y: Math.round((H - safeH) / 2),
+    w: Math.round(safeW),
+    h: Math.round(safeH),
+  };
+  updateCropDims();
+}
+
+function commitStraighten() {
+  // Bake the rotation + crop together into the image
+  if (straightenAngle === 0) { applyCrop(); return; }
+  applyRotation();      // bakes rotation into canvas pixels
+  straightenAngle = 0;
+  editVals.rotation = 0;
+  buildDialTicks();
+  const ro = document.getElementById('straightenReadout');
+  if (ro) ro.textContent = '0.0°';
+  // After baking, apply the crop on the now-straightened image
+  setTimeout(() => {
+    initCropRect(); // reset to full canvas (no black corners remain)
+    applyCrop();
+  }, 80);
+}
+
+// ── ROTATION HELPERS ──────────────────────────────────────────
+function resetRotation() {
+  editVals.rotation = 0;
+  // Rebuild rotation slider at zero
+  buildSliders('sl-crop', SLIDERS.crop);
+  const ro = document.getElementById('rotReadout');
+  if (ro) ro.textContent = '0.0°';
+  renderCanvas(false);
+}
+
+function applyRotation() {
+  // Bake the rotation into the canvas pixels and reset the CSS transform
+  const cvs = document.getElementById('canvasOut');
+  const rot = (editVals.rotation || 0) * Math.PI / 180;
+  if (rot === 0) return;
+  const W = cvs.width, H = cvs.height;
+  // Create temp canvas rotated
+  const tmp = document.createElement('canvas');
+  const cos = Math.abs(Math.cos(rot)), sin = Math.abs(Math.sin(rot));
+  tmp.width  = Math.round(W * cos + H * sin);
+  tmp.height = Math.round(W * sin + H * cos);
+  const tctx = tmp.getContext('2d');
+  tctx.translate(tmp.width / 2, tmp.height / 2);
+  tctx.rotate(rot);
+  tctx.drawImage(cvs, -W / 2, -H / 2);
+  // Write back
+  cvs.width  = tmp.width;
+  cvs.height = tmp.height;
+  cvs.style.transform = '';
+  const ctx = cvs.getContext('2d', {willReadFrequently:true});
+  ctx.drawImage(tmp, 0, 0);
+  // Update originalImage reference to baked version
+  const bakedImg = new Image();
+  bakedImg.onload = () => {
+    originalImage = bakedImg;
+    buildPreviewImage(bakedImg, cvs.width, cvs.height);
+  };
+  bakedImg.src = cvs.toDataURL();
+  editVals.rotation = 0;
+  buildSliders('sl-crop', SLIDERS.crop);
+  const ro = document.getElementById('rotReadout');
+  if (ro) ro.textContent = '0.0°';
+}
+
+function autoStraighten() {
+  // Show a rule-of-thirds / horizon grid overlay to help the photographer
+  // manually rotate to straighten — a guide, not automatic correction
+  const cvs = document.getElementById('canvasOut');
+  const ctx = cvs.getContext('2d', {willReadFrequently:true});
+  const W = cvs.width, H = cvs.height;
+  // Draw temporary grid overlay
+  ctx.save();
+  ctx.strokeStyle = 'rgba(79,142,247,0.5)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4,4]);
+  // Rule of thirds lines
+  [1/3, 2/3].forEach(f => {
+    ctx.beginPath(); ctx.moveTo(W*f, 0); ctx.lineTo(W*f, H); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, H*f); ctx.lineTo(W, H*f); ctx.stroke();
+  });
+  // Horizon center line
+  ctx.strokeStyle = 'rgba(240,164,48,0.6)';
+  ctx.setLineDash([8,4]);
+  ctx.beginPath(); ctx.moveTo(0, H/2); ctx.lineTo(W, H/2); ctx.stroke();
+  ctx.restore();
+  // Clear grid after 3 seconds
+  setTimeout(() => renderCanvas(false), 3000);
+}
+
+// ── CROP OVERLAY ─────────────────────────────────────────────
+let cropActive = false;
+let cropRect = { x:0, y:0, w:0, h:0 };
+let cropDragging = null;
+const HANDLE_SIZE = 10;
+
+function toggleCrop() {
+  cropActive = !cropActive;
+  const lbl = document.getElementById('cropToggleLbl');
+  const info = document.getElementById('cropInfo');
+  const btns = document.getElementById('cropBtns');
+  const dimsBox = document.getElementById('cropDimsBox');
+  if (lbl) lbl.textContent = cropActive ? 'Cancel crop' : 'Enable crop';
+  if (info) info.style.display = cropActive ? 'block' : 'none';
+  if (btns) btns.style.display = cropActive ? 'grid' : 'none';
+  if (dimsBox) dimsBox.style.display = cropActive ? 'block' : 'none';
+  if (cropActive) {
+    initCropRect();
+    requestAnimationFrame(() => drawCropOverlay());
+    const sp = document.getElementById('straightenPanel');
+    if (sp) { sp.style.display = 'block'; buildDialTicks(); }
+  } else {
+    hideCropOverlay();
+    const sp = document.getElementById('straightenPanel');
+    if (sp) sp.style.display = 'none';
+  }
+  syncCropToolBtn();
+}
+
+function initCropRect() {
+  const cvs = document.getElementById('canvasOut');
+  const W = cvs.width, H = cvs.height;
+  // Default: 90% of canvas with padding
+  const pad = Math.round(Math.min(W, H) * 0.05);
+  cropRect = { x: pad, y: pad, w: W - pad*2, h: H - pad*2 };
+  updateCropDims();
+}
+
+function updateCropDims() {
+  const el = document.getElementById('cropDims');
+  if (el) el.textContent = `${cropRect.w} × ${cropRect.h} px`;
+}
+
+function drawCropOverlay() {
+  if (!cropActive || !originalImage) return;
+
+  // Get the photo canvas CSS position and size (accounts for zoom/rotation transform)
+  const cvs = document.getElementById('canvasOut');
+  const frame = document.getElementById('cframe');
+  const oc = document.getElementById('cropOverlayCanvas');
+  if (!cvs || !oc || !frame) return;
+
+  // Size overlay canvas to match the frame exactly
+  const fRect = frame.getBoundingClientRect();
+  oc.width  = fRect.width;
+  oc.height = fRect.height;
+  oc.style.width  = fRect.width  + 'px';
+  oc.style.height = fRect.height + 'px';
+  oc.style.display = 'block';
+
+  // Map cropRect (in canvas pixel coords) to screen coords
+  // accounting for the CSS scale applied to canvasOut
+  const cRect = cvs.getBoundingClientRect();
+  const scaleX = cRect.width  / cvs.width;
+  const scaleY = cRect.height / cvs.height;
+  // Offset of canvas within frame
+  const offX = cRect.left - fRect.left;
+  const offY = cRect.top  - fRect.top;
+
+  const sx = offX + cropRect.x * scaleX;
+  const sy = offY + cropRect.y * scaleY;
+  const sw = cropRect.w * scaleX;
+  const sh = cropRect.h * scaleY;
+  const FW = fRect.width;
+  const FH = fRect.height;
+
+  const ctx = oc.getContext('2d');
+  ctx.clearRect(0, 0, FW, FH);
+
+  // Dark mask outside crop area
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.fillRect(0,   0,   FW, sy);           // top
+  ctx.fillRect(0,   sy+sh, FW, FH-sy-sh);  // bottom
+  ctx.fillRect(0,   sy, sx, sh);            // left
+  ctx.fillRect(sx+sw, sy, FW-sx-sw, sh);   // right
+
+  // Crop border
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([]);
+  ctx.strokeRect(sx, sy, sw, sh);
+
+  // Rule of thirds
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+  ctx.lineWidth = 0.8;
+  [1/3, 2/3].forEach(f => {
+    ctx.beginPath(); ctx.moveTo(sx+sw*f, sy); ctx.lineTo(sx+sw*f, sy+sh); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(sx, sy+sh*f); ctx.lineTo(sx+sw, sy+sh*f); ctx.stroke();
+  });
+
+  // Corner + edge handles
+  ctx.fillStyle = '#fff';
+  const hs = 9;
+  const corners = [[sx,sy],[sx+sw,sy],[sx,sy+sh],[sx+sw,sy+sh]];
+  const edges   = [[sx+sw/2,sy],[sx+sw/2,sy+sh],[sx,sy+sh/2],[sx+sw,sy+sh/2]];
+  [...corners,...edges].forEach(([hx,hy]) => ctx.fillRect(hx-hs/2, hy-hs/2, hs, hs));
+
+  updateCropDims();
+}
+
+function hideCropOverlay() {
+  const oc = document.getElementById('cropOverlayCanvas');
+  if (oc) { oc.style.display = 'none'; oc.getContext('2d').clearRect(0,0,oc.width,oc.height); }
+}
+
+function applyCrop() {
+  if (!cropActive || !originalImage) return;
+  const cvs = document.getElementById('canvasOut');
+  const ctx = cvs.getContext('2d', {willReadFrequently:true});
+  const {x, y, w, h} = cropRect;
+  // Grab just the crop area
+  const cropData = ctx.getImageData(x, y, w, h);
+  cvs.width = w; cvs.height = h;
+  ctx.putImageData(cropData, 0, 0);
+  // Bake into originalImage
+  const bakedImg = new Image();
+  bakedImg.onload = () => {
+    originalImage = bakedImg;
+    buildPreviewImage(bakedImg, w, h);
+    renderCanvas(false);
+  };
+  bakedImg.src = cvs.toDataURL();
+  cropActive = false;
+  const lbl = document.getElementById('cropToggleLbl');
+  const info = document.getElementById('cropInfo');
+  const btns = document.getElementById('cropBtns');
+  const dimsBox = document.getElementById('cropDimsBox');
+  if (lbl) lbl.textContent = 'Enable crop';
+  if (info) info.style.display = 'none';
+  if (btns) btns.style.display = 'none';
+  if (dimsBox) dimsBox.style.display = 'none';
+}
+
+function activateCropTool() {
+  // Switch to Geometry tab
+  switchTabByKey('geo');
+  document.querySelectorAll('.ptab').forEach(t => {
+    const m = t.getAttribute('onclick') && t.getAttribute('onclick').match(/'([^']+)'\)/);
+    t.classList.toggle('active', m && m[1] === 'geo');
+  });
+  // Enable crop if not already active
+  if (!cropActive) toggleCrop();
+  // Highlight the toolbar button
+  const btn = document.getElementById('cropToolBtn');
+  if (btn) btn.classList.add('active');
+}
+
+function syncCropToolBtn() {
+  const btn = document.getElementById('cropToolBtn');
+  if (btn) btn.classList.toggle('active', cropActive);
+}
+
+function resetCrop() {
+  cropActive = false;
+  straightenAngle = 0;
+  editVals.rotation = 0;
+  applyZoom();
+  hideCropOverlay();
+  const lbl = document.getElementById('cropToggleLbl');
+  const info = document.getElementById('cropInfo');
+  const btns = document.getElementById('cropBtns');
+  const dimsBox = document.getElementById('cropDimsBox');
+  if (lbl) lbl.textContent = 'Enable crop';
+  if (info) info.style.display = 'none';
+  if (btns) btns.style.display = 'none';
+  if (dimsBox) dimsBox.style.display = 'none';
+  renderCanvas(false); // remove overlay
+}
+
+// Crop drag interaction on the canvas
+document.addEventListener('DOMContentLoaded', () => {
+  const frame = document.getElementById('cframe');
+  if (!frame) return;
+
+  // Convert mouse event to canvas pixel coordinates
+  // cropRect is stored in canvas pixels so we need to map back
+  function screenToCropCoords(e) {
+    const cvs = document.getElementById('canvasOut');
+    if (!cvs) return {x:0,y:0};
+    const cRect = cvs.getBoundingClientRect();
+    const scaleX = cvs.width  / cRect.width;
+    const scaleY = cvs.height / cRect.height;
+    return {
+      x: (e.clientX - cRect.left) * scaleX,
+      y: (e.clientY - cRect.top)  * scaleY,
+    };
+  }
+
+  // Convert canvas pixel coords to screen coords for hit testing
+  function cropToScreen(cx, cy) {
+    const cvs = document.getElementById('canvasOut');
+    const fRect = frame.getBoundingClientRect();
+    if (!cvs) return {x:cx,y:cy};
+    const cRect = cvs.getBoundingClientRect();
+    const scaleX = cRect.width  / cvs.width;
+    const scaleY = cRect.height / cvs.height;
+    return {
+      x: (cRect.left - fRect.left) + cx * scaleX,
+      y: (cRect.top  - fRect.top)  + cy * scaleY,
+    };
+  }
+
+  function getFramePos(e) {
+    const fRect = frame.getBoundingClientRect();
+    return { x: e.clientX - fRect.left, y: e.clientY - fRect.top };
+  }
+
+  function getHandle(screenX, screenY) {
+    const {x, y, w, h} = cropRect;
+    const hs = 12; // hit area px in screen space
+    // Convert crop corners to screen space for hit testing
+    const handles = {
+      'tl':cropToScreen(x,y),     'tr':cropToScreen(x+w,y),
+      'bl':cropToScreen(x,y+h),   'br':cropToScreen(x+w,y+h),
+      'tm':cropToScreen(x+w/2,y), 'bm':cropToScreen(x+w/2,y+h),
+      'ml':cropToScreen(x,y+h/2), 'mr':cropToScreen(x+w,y+h/2),
+    };
+    for (const [name,{x:hx,y:hy}] of Object.entries(handles)) {
+      if (Math.abs(screenX-hx) < hs && Math.abs(screenY-hy) < hs) return name;
+    }
+    // Inside crop = move (check in screen space)
+    const tl = cropToScreen(x,y);
+    const br = cropToScreen(x+w,y+h);
+    if (screenX>tl.x && screenX<br.x && screenY>tl.y && screenY<br.y) return 'move';
+    return null;
+  }
+
+  let dragStart = null, rectStart = null;
+
+  frame.addEventListener('mousedown', e => {
+    if (!cropActive) return;
+    const fp = getFramePos(e);
+    const handle = getHandle(fp.x, fp.y);
+    if (handle) {
+      cropDragging = handle;
+      dragStart = screenToCropCoords(e);
+      rectStart = {...cropRect};
+      e.preventDefault();
+    }
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (!cropActive || !cropDragging) return;
+    const pos = screenToCropCoords(e);
+    const dx = pos.x - dragStart.x;
+    const dy = pos.y - dragStart.y;
+    const cvs = document.getElementById('canvasOut');
+    const W = cvs ? cvs.width : 1000;
+    const H = cvs ? cvs.height : 1000;
+    let {x,y,w,h} = rectStart;
+    const MIN = 40;
+    if (cropDragging === 'move') {
+      x = Math.max(0, Math.min(W-w, x+dx));
+      y = Math.max(0, Math.min(H-h, y+dy));
+    } else {
+      if (cropDragging.includes('l')) { x = Math.min(x+w-MIN, x+dx); w = rectStart.x+rectStart.w-x; }
+      if (cropDragging.includes('r')) { w = Math.max(MIN, w+dx); }
+      if (cropDragging.includes('t')) { y = Math.min(y+h-MIN, y+dy); h = rectStart.y+rectStart.h-y; }
+      if (cropDragging.includes('b')) { h = Math.max(MIN, h+dy); }
+      if (cropDragging==='tm'||cropDragging==='bm') x = rectStart.x;
+      if (cropDragging==='ml'||cropDragging==='mr') y = rectStart.y;
+      x=Math.max(0,x); y=Math.max(0,y);
+      w=Math.min(W-x,w); h=Math.min(H-y,h);
+    }
+    cropRect = {x:Math.round(x),y:Math.round(y),w:Math.round(w),h:Math.round(h)};
+    drawCropOverlay();
+  });
+
+  document.addEventListener('mouseup', () => { cropDragging = null; });
+
+  // Cursor change on hover
+  frame.addEventListener('mousemove', e => {
+    if (!cropActive) return;
+    const fp = getFramePos(e);
+    const handle = getHandle(fp.x, fp.y);
+    const cursors = {
+      tl:'nw-resize',tr:'ne-resize',bl:'sw-resize',br:'se-resize',
+      tm:'n-resize',bm:'s-resize',ml:'w-resize',mr:'e-resize',move:'move',
+    };
+    const cvs = document.getElementById('canvasOut');
+    if (cvs) cvs.style.cursor = handle ? (cursors[handle]||'crosshair') : 'crosshair';
+  });
+});
+
+// ── AUTO-UNIFY ROOM ────────────────────────────────────────────
+// Analyses the loaded photo to detect how much cool shadow / darkness
+// exists in ceiling and edge zones, then sets slider values accordingly.
+function applyUnifyRoom() {
+  if (!originalImage) {
+    alert('Load a photo first, then click Auto-unify.');
+    return;
+  }
+  const btn = document.getElementById('unifyBtn');
+  btn.textContent = 'Analyzing…';
+  btn.disabled = true;
+
+  setTimeout(() => {
+    // Sample the canvas to measure zone characteristics
+    const cvs = document.createElement('canvas');
+    const scale = Math.min(1, 400 / originalImage.naturalWidth);
+    cvs.width  = Math.round(originalImage.naturalWidth  * scale);
+    cvs.height = Math.round(originalImage.naturalHeight * scale);
+    const ctx = cvs.getContext('2d');
+    ctx.drawImage(originalImage, 0, 0, cvs.width, cvs.height);
+    const W = cvs.width, H = cvs.height;
+    const d = ctx.getImageData(0, 0, W, H).data;
+
+    // Measure each zone independently on original pixels
+    // Ceiling: strict top 25% center strip (avoid windows on sides)
+    let ceilLum=0, ceilBlue=0, ceilN=0;
+    // Edges: left/right 14% columns, middle vertical band only (avoid ceiling/floor)
+    let edgeLum=0, edgeWarm=0, edgeN=0;
+    // Walls: strict center rectangle — far from ceiling, floor, and edges
+    let wallLum=0, wallWarm=0, wallBlue=0, wallN=0;
+    // Reference center: the most neutral area — center 40% of frame both axes
+    let refLum=0, refWarm=0, refN=0;
+
+    for (let i = 0; i < d.length; i += 4) {
+      const row = Math.floor((i/4) / W);
+      const col = (i/4) % W;
+      const yP = row / H, xP = col / W;
+      const r = d[i], g = d[i+1], b = d[i+2];
+      const lum = (r*0.299 + g*0.587 + b*0.114) / 255;
+      const warm = (r - b) / 255;
+      const blue = (b - r) / 255;
+
+      // Strict ceiling zone — center strip only, top 25%
+      if (yP < 0.25 && xP > 0.2 && xP < 0.8) {
+        ceilLum  += lum;
+        ceilBlue += Math.max(0, blue); // only positive blue cast
+        ceilN++;
+      }
+      // Edge walls — left/right columns, strictly between ceiling and floor
+      if (yP > 0.35 && yP < 0.72 && (xP < 0.14 || xP > 0.86)) {
+        edgeLum  += lum;
+        edgeWarm += warm;
+        edgeN++;
+      }
+      // Wall center — strict inner rectangle, well away from all borders
+      if (yP > 0.30 && yP < 0.70 && xP > 0.25 && xP < 0.75) {
+        wallLum  += lum;
+        wallWarm += warm;
+        wallBlue += blue;
+        wallN++;
+      }
+      // Reference center — tightest most representative area
+      if (yP > 0.35 && yP < 0.65 && xP > 0.30 && xP < 0.70) {
+        refLum  += lum;
+        refWarm += warm;
+        refN++;
+      }
+    }
+
+    if (ceilN > 0) { ceilLum /= ceilN; ceilBlue /= ceilN; }
+    if (edgeN > 0) { edgeLum /= edgeN; edgeWarm /= edgeN; }
+    if (wallN > 0) { wallLum /= wallN; wallWarm /= wallN; wallBlue /= wallN; }
+    if (refN  > 0) { refLum  /= refN;  refWarm  /= refN; }
+
+    // ── Derive corrections ──────────────────────────────────
+    // CEILING: only correct if genuinely cool (blue cast detected)
+    // Conservative cap — real corrections are subtle
+    const ceilCoolness   = Math.max(0, ceilBlue);
+    const ceilDarkness   = Math.max(0, refLum - ceilLum); // dark vs reference
+    const ceilShadowFill = Math.round(Math.min(75, ceilDarkness * 260));
+    const ceilWarmAdj    = Math.round(Math.min(60, ceilCoolness * 320));
+    const ceilBrightness = Math.round(Math.min(30, ceilDarkness * 90));
+
+    // EDGES: only correct if darker than wall center
+    const edgeDarkness   = Math.max(0, wallLum - edgeLum);
+    const edgeShadowFill = Math.round(Math.min(75, edgeDarkness * 360));
+    // Edge warmth: only if edges are measurably cooler than wall center
+    const edgeCoolDiff   = Math.max(0, wallWarm - edgeWarm);
+    const edgeWarmAdj    = Math.round(Math.min(55, edgeCoolDiff * 260));
+    const edgeDesat      = Math.round(Math.min(30, ceilCoolness * 120));
+
+    // WALLS: only correct if walls are measurably cooler than reference center.
+    // If walls are neutral or warm (warm >= -0.02), correction = 0.
+    // This prevents the blue shift on already-neutral beige walls.
+    const wallCoolness   = Math.max(0, -wallWarm - 0.02); // only if genuinely cool
+    const wallWarmAdj    = Math.round(Math.min(20, wallCoolness * 150));
+    // No saturation push on walls — that was causing color shifts
+    const wallSatAdj     = 0;
+
+    // Apply to editVals
+    editVals.ceiling_shadowfill  = ceilShadowFill;
+    editVals.ceiling_warmth      = ceilWarmAdj;
+    editVals.ceiling_brightness  = ceilBrightness;
+    editVals.ceiling_blend       = 62;
+    editVals.edges_shadowfill    = edgeShadowFill;
+    editVals.edges_warmth        = edgeWarmAdj;
+    editVals.edges_desaturate    = edgeDesat;
+    editVals.edges_blend         = 52;
+    editVals.walls_warmth        = wallWarmAdj;
+    editVals.walls_brightness    = 0;
+    editVals.walls_saturation    = wallSatAdj;
+    editVals.walls_blend         = 65;
+
+    // Rebuild zone sliders to show new values
+    buildZoneSliders('ceiling', [
+      ['Shadow fill', editVals.ceiling_shadowfill,  0, 100],
+      ['Warmth',      editVals.ceiling_warmth,      -100, 100],
+      ['Brightness',  editVals.ceiling_brightness,  -100, 100],
+      ['Blend',       editVals.ceiling_blend,       0, 100],
+    ]);
+    buildZoneSliders('edges', [
+      ['Shadow fill', editVals.edges_shadowfill,  0, 100],
+      ['Warmth',      editVals.edges_warmth,      -100, 100],
+      ['Desaturate',  editVals.edges_desaturate,  0, 100],
+      ['Blend',       editVals.edges_blend,       0, 100],
+    ]);
+    buildZoneSliders('walls', [
+      ['Brightness',  editVals.walls_brightness,  -100, 100],
+      ['Warmth',      editVals.walls_warmth,      -100, 100],
+      ['Saturation',  editVals.walls_saturation,  -100, 100],
+      ['Blend',       editVals.walls_blend,       0, 100],
+    ]);
+
+    renderCanvas(false);
+    btn.textContent = 'Auto-unify';
+    btn.disabled = false;
+  }, 50);
+}
+
+function resetUnify() {
+  const zkeys = Object.keys(ZONE_DEFAULTS);
+  zkeys.forEach(k => { editVals[k] = ZONE_DEFAULTS[k]; });
+  buildZoneSliders('ceiling', ZONE_SLIDERS.ceiling);
+  buildZoneSliders('edges',   ZONE_SLIDERS.edges);
+  buildZoneSliders('walls',   ZONE_SLIDERS.walls);
+  buildZoneSliders('floor',   ZONE_SLIDERS.floor);
+  renderCanvas(false);
+}
+
+</script>
+</body>
+</html>
