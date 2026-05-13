@@ -897,6 +897,9 @@ function loadPhoto(file){
   reader.onload=function(e){
     imageBase64=e.target.result.split(',')[1];
     imageType=file.type;
+    // Lock the true original — never overwritten by backend corrections
+    trueOriginalBase64 = imageBase64;
+    trueOriginalType   = file.type;
 
     // Step 1: Show canvas immediately with a raw draw — no processing yet
     // This makes the photo appear instantly while we set up in the background
@@ -2380,10 +2383,13 @@ function showLensStatus(msg, type) {
 
 async function applyLensCorrection() {
   // Called when any geo slider (Vertical, Horizontal, Distortion) is released
-  if (!hasPhoto || !imageBase64) return;
-  if (lensCallPending) return; // don't stack calls
-  // Only fire if at least one lens slider is non-zero
-  if (editVals.vertical === 0 && editVals.horizontal === 0 && editVals.distortion === 0) return;
+  if (!hasPhoto || !trueOriginalBase64) return;
+  if (lensCallPending) return;
+  if (editVals.vertical === 0 && editVals.horizontal === 0 && editVals.distortion === 0) {
+    // All zero — restore true original display
+    await restoreTrueOriginal();
+    return;
+  }
 
   lensCallPending = true;
   showLensStatus('Applying lens correction…', 'info');
@@ -2393,7 +2399,7 @@ async function applyLensCorrection() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        image:      `data:${imageType};base64,${imageBase64}`,
+        image:      `data:${trueOriginalType};base64,${trueOriginalBase64}`,
         distortion: editVals.distortion  || 0,
         vertical:   editVals.vertical    || 0,
         horizontal: editVals.horizontal  || 0,
@@ -2419,7 +2425,7 @@ async function applyLensCorrection() {
 }
 
 async function runAutoLensCorrect() {
-  if (!hasPhoto || !imageBase64) {
+  if (!hasPhoto || !trueOriginalBase64) {
     showLensStatus('Load a photo first', 'warn'); return;
   }
   const btn = document.querySelector('[onclick="runAutoLensCorrect()"]');
@@ -2431,7 +2437,7 @@ async function runAutoLensCorrect() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        image: `data:${imageType};base64,${imageBase64}`
+        image: `data:${trueOriginalType};base64,${trueOriginalBase64}`
       })
     });
 
@@ -2469,14 +2475,26 @@ async function runAutoLensCorrect() {
   }
 }
 
+// ── TRUE ORIGINAL — never overwritten by backend corrections ──
+// Always send this to the backend so corrections stack from clean source
+let trueOriginalBase64 = null;
+let trueOriginalType   = null;
+
+async function restoreTrueOriginal() {
+  // Called when all lens sliders are reset to zero — show clean original
+  if (!trueOriginalBase64) return;
+  await loadCorrectedImage(`data:${trueOriginalType};base64,${trueOriginalBase64}`);
+  showLensStatus('Reset to original', 'info');
+}
+
 async function loadCorrectedImage(b64DataUrl) {
-  // Load backend-corrected image back as the working image
+  // Load backend-corrected image for DISPLAY only
+  // trueOriginalBase64 is never touched — backend always works from the clean original
   return new Promise((resolve) => {
     const img = document.getElementById('canvasPhoto');
     img.onload = function() {
-      originalImage = img;
+      originalImage = img; // display image updates
       buildPreviewImage(img, img.naturalWidth, img.naturalHeight);
-      // Re-size canvas to new dimensions
       requestAnimationFrame(() => {
         const frameEl = document.getElementById('cframe');
         const frameW = frameEl ? frameEl.offsetWidth  : 900;
@@ -2495,11 +2513,11 @@ async function loadCorrectedImage(b64DataUrl) {
       });
     };
     img.src = b64DataUrl;
-    // Also update imageBase64 for future backend calls
-    imageBase64 = b64DataUrl.split(',')[1];
-    imageType   = 'image/jpeg';
+    // NOTE: imageBase64 and trueOriginalBase64 are NOT updated here
+    // Backend always receives the true original
   });
 }
+
 // Also build the mini histogram in the Tone accordion
 function buildMiniHist(id){
   const el=document.getElementById(id);
@@ -2844,7 +2862,12 @@ function masterReset() {
   if (sbsMode) toggleSideBySide();
 
   // 7. Re-render the photo with all defaults
-  renderCanvas(false);
+  // If lens corrections were applied, restore true original
+  if (trueOriginalBase64) {
+    restoreTrueOriginal();
+  } else {
+    renderCanvas(false);
+  }
 
   // 8. Flash the Reset All button briefly to confirm
   const btn = document.getElementById('masterResetBtn');
