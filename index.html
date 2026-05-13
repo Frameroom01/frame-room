@@ -2463,8 +2463,9 @@ async function runAutoLensCorrect() {
       await loadCorrectedImage(data.image);
 
       const lines = data.lines_found || 0;
+      const scene = data.scene_type || 'unknown';
       showLensStatus(
-        `✓ Auto-corrected · ${lines} lines detected · Vertical: ${d.vertical||0} · Distortion: ${d.distortion||0}`,
+        `✓ Auto-corrected · ${lines} lines · ${scene} · Vertical: ${d.vertical||0} · Distortion: ${d.distortion||0}`,
         'good'
       );
     }
