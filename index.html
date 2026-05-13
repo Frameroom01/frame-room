@@ -707,8 +707,8 @@ html,body{height:100%;overflow:hidden;font-family:var(--font);background:var(--b
         </div>
         <div class="acc-body" id="acc-body-geo" style="display:none">
           <div class="stitle">Lens & Perspective</div>
-        <div style="font-size:10px;color:var(--t2);margin-bottom:8px;line-height:1.5;padding:6px 8px;background:var(--bg2);border-radius:var(--r);border:1px solid var(--border)">
-          ⚠ Vertical, Horizontal & Distortion corrections require Phase 3 backend. Coming soon.
+        <div style="background:var(--bg2);border:1px solid rgba(56,193,114,.2);border-radius:var(--r);padding:9px 11px;margin-bottom:10px;font-size:10.5px;color:var(--grn);display:flex;align-items:center;gap:6px">
+          ✓ Backend connected — lens correction is live
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
           <span class="stitle" style="margin:0">Lens & Perspective</span>
@@ -783,7 +783,8 @@ html,body{height:100%;overflow:hidden;font-family:var(--font);background:var(--b
         </div>
         <div class="divider"></div>
         <button class="abtn blue" style="width:100%;justify-content:center;margin-bottom:5px" onclick="autoStraighten()">↕ Auto-straighten (rotation guide)</button>
-        <button class="abtn blue" style="width:100%;justify-content:center">⊙ Auto lens correction (Phase 3)</button>
+        <button class="abtn blue" style="width:100%;justify-content:center;margin-bottom:5px" onclick="runAutoLensCorrect()">⊙ Auto lens correction</button>
+        <div id="lensStatus" style="display:none;font-size:10.5px;line-height:1.5;padding:7px 9px;border-radius:var(--r);border:1px solid var(--border2);background:var(--bg3);margin-top:6px"></div>
         </div>
       </div>
 
@@ -1653,6 +1654,9 @@ const PARAM_MAP = {
   'Temperature':'temperature','Tint':'tint',
   'Vignette':'vignette',
   'Rotation':'rotation',
+  'Vertical':'vertical',
+  'Horizontal':'horizontal',
+  'Distortion':'distortion',
   'Red Hue':'redHue','Red Sat':'redSat','Red Lum':'redLum',
   'Orange Hue':'orangeHue','Orange Sat':'orangeSat','Orange Lum':'orangeLum',
   'Yellow Hue':'yellowHue','Yellow Sat':'yellowSat','Yellow Lum':'yellowLum',
@@ -1669,6 +1673,9 @@ const DEFAULTS = {
   temperature:0, tint:0,
   vignette:0,
   rotation:0,
+  vertical:0,
+  horizontal:0,
+  distortion:0,
   // Color mix — all zero, no changes on load
   redHue:0, redSat:0, redLum:0,
   orangeHue:0, orangeSat:0, orangeLum:0,
@@ -1696,7 +1703,7 @@ const RESET_GROUPS = {
   cmix:       ['redHue','redSat','redLum','orangeHue','orangeSat','orangeLum',
                'yellowHue','yellowSat','yellowLum','greenHue','greenSat','greenLum',
                'blueHue','blueSat','blueLum'],
-  geo:        ['vignette'],
+  geo:        ['vignette','vertical','horizontal','distortion'],
   crop:       ['rotation'],
 };
 // Slider container id → group key
@@ -2260,6 +2267,7 @@ function updateDrag(e) {
     const param = PARAM_MAP[m[1].replace(/_/g, ' ')];
     if (param !== undefined) {
       editVals[param] = rounded;
+      window._lastDragParam = param; // track for backend trigger on mouseup
       schedulePreviewRender();
     }
   }
@@ -2285,7 +2293,15 @@ document.addEventListener('mouseup', () => {
   if (wasDragging || wasDraggingDS) {
     clearTimeout(fullRenderTimer);
     snapshotForUndo();
-    setTimeout(() => renderCanvas(false), 50);
+    setTimeout(() => {
+      renderCanvas(false);
+      // If a geo slider was moved, call the backend
+      const geoParams = ['vertical','horizontal','distortion'];
+      const lastParam = window._lastDragParam;
+      if (lastParam && geoParams.includes(lastParam)) {
+        applyLensCorrection();
+      }
+    }, 50);
   }
 });
 
@@ -2338,6 +2354,152 @@ setTimeout(() => {
 }, 200);
 
 buildHist('hist1'); buildHist('hist2');
+
+// ── PHASE 5 BACKEND ───────────────────────────────────────────
+const BACKEND_URL = 'https://web-production-a5292.up.railway.app';
+
+// Track if a backend call is in flight to avoid queuing duplicates
+let lensCallPending = false;
+
+function showLensStatus(msg, type) {
+  const el = document.getElementById('lensStatus');
+  if (!el) return;
+  el.style.display = 'block';
+  const colors = {
+    info:  {bg:'rgba(79,142,247,.08)',  border:'rgba(79,142,247,.25)',  color:'var(--t1)'},
+    good:  {bg:'rgba(56,193,114,.08)',  border:'rgba(56,193,114,.25)',  color:'var(--grn)'},
+    warn:  {bg:'rgba(240,160,48,.08)',  border:'rgba(240,160,48,.25)',  color:'var(--amb)'},
+    error: {bg:'rgba(232,81,74,.08)',   border:'rgba(232,81,74,.25)',   color:'var(--cor)'},
+  };
+  const c = colors[type] || colors.info;
+  el.style.background = c.bg;
+  el.style.borderColor = c.border;
+  el.style.color = c.color;
+  el.textContent = msg;
+}
+
+async function applyLensCorrection() {
+  // Called when any geo slider (Vertical, Horizontal, Distortion) is released
+  if (!hasPhoto || !imageBase64) return;
+  if (lensCallPending) return; // don't stack calls
+  // Only fire if at least one lens slider is non-zero
+  if (editVals.vertical === 0 && editVals.horizontal === 0 && editVals.distortion === 0) return;
+
+  lensCallPending = true;
+  showLensStatus('Applying lens correction…', 'info');
+
+  try {
+    const resp = await fetch(`${BACKEND_URL}/lens-correction`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        image:      `data:${imageType};base64,${imageBase64}`,
+        distortion: editVals.distortion  || 0,
+        vertical:   editVals.vertical    || 0,
+        horizontal: editVals.horizontal  || 0,
+      })
+    });
+
+    if (!resp.ok) throw new Error('Backend error ' + resp.status);
+    const data = await resp.json();
+
+    if (data.success && data.image) {
+      // Load corrected image back into the editor
+      await loadCorrectedImage(data.image);
+      showLensStatus(
+        `✓ Applied — Distortion: ${editVals.distortion||0} · Vertical: ${editVals.vertical||0} · Horizontal: ${editVals.horizontal||0}`,
+        'good'
+      );
+    }
+  } catch (err) {
+    showLensStatus('Backend unreachable — check connection', 'error');
+  } finally {
+    lensCallPending = false;
+  }
+}
+
+async function runAutoLensCorrect() {
+  if (!hasPhoto || !imageBase64) {
+    showLensStatus('Load a photo first', 'warn'); return;
+  }
+  const btn = document.querySelector('[onclick="runAutoLensCorrect()"]');
+  if (btn) { btn.textContent = '⊙ Analyzing…'; btn.disabled = true; }
+  showLensStatus('Detecting lines and calculating correction…', 'info');
+
+  try {
+    const resp = await fetch(`${BACKEND_URL}/auto-lens-correct`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        image: `data:${imageType};base64,${imageBase64}`
+      })
+    });
+
+    if (!resp.ok) throw new Error('Backend error ' + resp.status);
+    const data = await resp.json();
+
+    if (data.success && data.image) {
+      // Update slider values to show what was detected
+      const d = data.detected || {};
+      snapshotForUndo();
+      editVals.distortion  = d.distortion  || 0;
+      editVals.vertical    = d.vertical    || 0;
+      editVals.horizontal  = d.horizontal  || 0;
+
+      // Rebuild geo sliders to show detected values
+      buildSliders('sl-geo', [
+        ['Vertical',    editVals.vertical,   -100, 100],
+        ['Horizontal',  editVals.horizontal, -100, 100],
+        ['Distortion',  editVals.distortion, -100, 100],
+        ['Vignette',    editVals.vignette,   -100, 100],
+      ]);
+
+      await loadCorrectedImage(data.image);
+
+      const lines = data.lines_found || 0;
+      showLensStatus(
+        `✓ Auto-corrected · ${lines} lines detected · Vertical: ${d.vertical||0} · Distortion: ${d.distortion||0}`,
+        'good'
+      );
+    }
+  } catch (err) {
+    showLensStatus('Auto-correct failed — ' + (err.message || 'check connection'), 'error');
+  } finally {
+    if (btn) { btn.textContent = '⊙ Auto lens correction'; btn.disabled = false; }
+  }
+}
+
+async function loadCorrectedImage(b64DataUrl) {
+  // Load backend-corrected image back as the working image
+  return new Promise((resolve) => {
+    const img = document.getElementById('canvasPhoto');
+    img.onload = function() {
+      originalImage = img;
+      buildPreviewImage(img, img.naturalWidth, img.naturalHeight);
+      // Re-size canvas to new dimensions
+      requestAnimationFrame(() => {
+        const frameEl = document.getElementById('cframe');
+        const frameW = frameEl ? frameEl.offsetWidth  : 900;
+        const frameH = frameEl ? frameEl.offsetHeight : 600;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const cssScale = Math.min(1, frameW / img.naturalWidth, frameH / img.naturalHeight);
+        const cssW = Math.round(img.naturalWidth  * cssScale);
+        const cssH = Math.round(img.naturalHeight * cssScale);
+        const cvs = document.getElementById('canvasOut');
+        cvs.width  = Math.round(cssW * dpr);
+        cvs.height = Math.round(cssH * dpr);
+        cvs.style.width  = cssW + 'px';
+        cvs.style.height = cssH + 'px';
+        renderCanvas(false);
+        resolve();
+      });
+    };
+    img.src = b64DataUrl;
+    // Also update imageBase64 for future backend calls
+    imageBase64 = b64DataUrl.split(',')[1];
+    imageType   = 'image/jpeg';
+  });
+}
 // Also build the mini histogram in the Tone accordion
 function buildMiniHist(id){
   const el=document.getElementById(id);
