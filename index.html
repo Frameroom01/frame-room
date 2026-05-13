@@ -623,6 +623,32 @@ html,body{height:100%;overflow:hidden;font-family:var(--font);background:var(--b
         <div style="font-size:10px;color:var(--t2);margin-bottom:10px;line-height:1.5">Slide right to increase effect intensity.</div>
         <div id="sl-re"></div>
         <div class="divider"></div>
+
+        <!-- Window Glare Removal -->
+        <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--rl);padding:10px;margin-bottom:10px">
+          <div style="font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--t2);margin-bottom:8px">Window Glare Removal</div>
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+            <span style="font-size:10.5px;color:var(--t1);min-width:60px">Strength</span>
+            <input type="range" id="glareStrength" min="0" max="100" value="80"
+              style="flex:1;accent-color:var(--acc)"
+              oninput="document.getElementById('glareStrengthVal').textContent=this.value">
+            <span style="font-size:10px;font-family:var(--mono);color:var(--acc);min-width:28px" id="glareStrengthVal">80</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+            <input type="checkbox" id="glareRecover" checked style="accent-color:var(--acc)">
+            <span style="font-size:10.5px;color:var(--t1)">Recover window detail</span>
+          </div>
+          <button id="glareBtn" onclick="runGlareRemoval()"
+            style="width:100%;padding:8px;border-radius:var(--r);font-size:11.5px;font-weight:500;
+            border:1px solid rgba(79,142,247,.25);background:rgba(79,142,247,.07);color:var(--acc);
+            cursor:pointer;font-family:var(--font);display:flex;align-items:center;justify-content:center;gap:7px">
+            ✦ Remove Window Glare
+          </button>
+          <div id="glareStatus" style="display:none;font-size:10.5px;line-height:1.5;padding:7px 9px;
+            border-radius:var(--r);border:1px solid var(--border2);background:var(--bg3);margin-top:6px"></div>
+        </div>
+
+        <div class="divider"></div>
         <div class="stitle">Auto Corrections</div>
         <div id="sl-auto"></div>
         <div class="divider"></div>
@@ -2885,7 +2911,67 @@ function masterReset() {
   }
 }
 
-// ── STRAIGHTEN DIAL ───────────────────────────────────────────
+// ── WINDOW GLARE REMOVAL ──────────────────────────────────────
+function showGlareStatus(msg, type) {
+  const el = document.getElementById('glareStatus');
+  if (!el) return;
+  el.style.display = 'block';
+  const colors = {
+    info:  {bg:'rgba(79,142,247,.08)',  border:'rgba(79,142,247,.25)',  color:'var(--t1)'},
+    good:  {bg:'rgba(56,193,114,.08)',  border:'rgba(56,193,114,.25)',  color:'var(--grn)'},
+    warn:  {bg:'rgba(240,160,48,.08)',  border:'rgba(240,160,48,.25)',  color:'var(--amb)'},
+    error: {bg:'rgba(232,81,74,.08)',   border:'rgba(232,81,74,.25)',   color:'var(--cor)'},
+  };
+  const c = colors[type] || colors.info;
+  el.style.background = c.bg;
+  el.style.borderColor = c.border;
+  el.style.color = c.color;
+  el.textContent = msg;
+}
+
+async function runGlareRemoval() {
+  if (!hasPhoto || !trueOriginalBase64) {
+    showGlareStatus('Load a photo first', 'warn'); return;
+  }
+  const btn = document.getElementById('glareBtn');
+  const strength = document.getElementById('glareStrength')?.value || 80;
+  const recover  = document.getElementById('glareRecover')?.checked ?? true;
+
+  btn.textContent = '✦ Analyzing windows…';
+  btn.disabled = true;
+  showGlareStatus('Detecting overexposed window regions…', 'info');
+
+  try {
+    const resp = await fetch(`${BACKEND_URL}/window-glare`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        image:           `data:${trueOriginalType};base64,${trueOriginalBase64}`,
+        strength:        parseFloat(strength),
+        recover_detail:  recover,
+      })
+    });
+
+    if (!resp.ok) throw new Error('Backend error ' + resp.status);
+    const data = await resp.json();
+
+    if (data.success && data.image) {
+      snapshotForUndo();
+      await loadCorrectedImage(data.image);
+      const wins = data.windows_found || 0;
+      const pct  = data.coverage_pct  || 0;
+      showGlareStatus(
+        `✓ Done · ${wins} window region${wins!==1?'s':''} corrected · ${pct}% of image · Strength: ${strength}%`,
+        'good'
+      );
+    }
+  } catch(err) {
+    showGlareStatus('Glare removal failed — ' + (err.message || 'check connection'), 'error');
+  } finally {
+    btn.textContent = '✦ Remove Window Glare';
+    btn.disabled = false;
+  }
+}
 let straightenAngle = 0;      // current rotation in degrees (-45 to +45)
 let dialDragStartX = null;
 let dialDragStartAngle = null;
