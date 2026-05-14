@@ -2958,10 +2958,10 @@ async function runGlareRemoval() {
     if (data.success && data.image) {
       snapshotForUndo();
       await loadCorrectedImage(data.image);
-      const wins = data.windows_found || 0;
+      const wins = data.regions_found || 0;
       const pct  = data.coverage_pct  || 0;
       showGlareStatus(
-        `✓ Done · ${wins} window region${wins!==1?'s':''} corrected · ${pct}% of image · Strength: ${strength}%`,
+        `✓ Done · ${wins} glare region${wins!==1?'s':''} corrected · ${pct}% of image affected · Strength: ${strength}%`,
         'good'
       );
     }
