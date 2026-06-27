@@ -624,6 +624,73 @@ html,body{height:100%;overflow:hidden;font-family:var(--font);background:var(--b
         <div id="sl-re"></div>
         <div class="divider"></div>
 
+        <!-- HDR Blend -->
+        <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--rl);padding:10px;margin-bottom:10px">
+          <div style="font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--t2);margin-bottom:8px">HDR Blend — Bracket Merge</div>
+
+          <!-- Step 1: Upload -->
+          <div style="margin-bottom:10px">
+            <div style="font-size:10px;color:var(--t1);font-weight:500;margin-bottom:6px">① Upload bracketed exposures</div>
+            <label style="display:flex;align-items:center;justify-content:center;gap:6px;
+              padding:8px;border-radius:var(--r);border:1px dashed var(--border2);
+              background:var(--bg3);cursor:pointer;font-size:11px;color:var(--t1)">
+              <input type="file" accept="image/*" multiple id="hdrFilesInput"
+                onchange="hdrFilesLoaded(event)" style="display:none">
+              📷 Upload 2–7 exposures
+            </label>
+            <div id="hdrUploadStatus" style="font-size:10px;color:var(--t2);margin-top:4px"></div>
+          </div>
+
+          <!-- Step 2: Auto-group controls -->
+          <div id="hdrGroupPanel" style="display:none">
+            <div style="font-size:10px;color:var(--t1);font-weight:500;margin-bottom:6px">② Group by timestamp</div>
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+              <span style="font-size:10px;color:var(--t2);min-width:50px">Window</span>
+              <input type="range" id="hdrTimeWindow" min="1" max="30" value="5"
+                style="flex:1;accent-color:var(--acc)"
+                oninput="updateHDRTimeWindow(this.value)">
+              <span style="font-size:10px;font-family:var(--mono);color:var(--acc);min-width:40px" id="hdrTimeWindowVal">5 sec</span>
+            </div>
+            <button onclick="autoGroupHDR()"
+              style="width:100%;padding:6px;border-radius:var(--r);font-size:11px;
+              border:1px solid var(--border2);background:var(--bg3);color:var(--t1);
+              cursor:pointer;font-family:var(--font);margin-bottom:8px">
+              ⚡ Auto-group by timestamp
+            </button>
+
+            <!-- Groups display -->
+            <div id="hdrGroupsContainer" style="margin-bottom:8px"></div>
+
+            <!-- Manual add to group -->
+            <div id="hdrManualPanel" style="display:none;margin-bottom:8px">
+              <div style="font-size:10px;color:var(--t2);margin-bottom:4px">Ungrouped photos — drag to a group:</div>
+              <div id="hdrUngrouped" style="display:flex;flex-wrap:wrap;gap:4px"></div>
+            </div>
+          </div>
+
+          <!-- Step 3: Blend settings -->
+          <div id="hdrBlendSettings" style="display:none">
+            <div style="font-size:10px;color:var(--t1);font-weight:500;margin-bottom:6px">③ Blend settings</div>
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+              <span style="font-size:10px;color:var(--t2);min-width:50px">Feather</span>
+              <input type="range" id="hdrFeather" min="0" max="100" value="40"
+                style="flex:1;accent-color:var(--acc)"
+                oninput="document.getElementById('hdrFeatherVal').textContent=this.value+'%'">
+              <span style="font-size:10px;font-family:var(--mono);color:var(--acc);min-width:32px" id="hdrFeatherVal">40%</span>
+            </div>
+            <button id="hdrBlendBtn" onclick="runMultiHDRBlend()"
+              style="width:100%;padding:8px;border-radius:var(--r);font-size:11.5px;font-weight:500;
+              border:1px solid rgba(79,142,247,.25);background:rgba(79,142,247,.07);color:var(--acc);
+              cursor:pointer;font-family:var(--font);display:flex;align-items:center;justify-content:center;gap:7px">
+              ◈ Blend Selected Group
+            </button>
+          </div>
+
+          <div id="hdrStatus" style="display:none;font-size:10.5px;line-height:1.5;
+            padding:7px 9px;border-radius:var(--r);border:1px solid var(--border2);
+            background:var(--bg3);margin-top:6px"></div>
+        </div>
+
         <!-- Window Glare Removal -->
         <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--rl);padding:10px;margin-bottom:10px">
           <div style="font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--t2);margin-bottom:8px">Window Glare Removal</div>
@@ -978,6 +1045,7 @@ function loadPhoto(file){
       undoStack = [JSON.stringify(editVals)];
       undoPointer = 0;
       updateUndoBtn();
+      checkHDRReady();
 
       // Apply edits in next frame
       requestAnimationFrame(() => renderCanvas(false));
@@ -2910,6 +2978,303 @@ function masterReset() {
     }, 1800);
   }
 }
+
+// ── HDR MULTI-EXPOSURE BLEND ──────────────────────────────────
+let hdrFiles       = [];   // {file, base64, filename, timestamp, groupId}
+let hdrGroups      = [];   // [{id, indices:[]}]
+let hdrSelectedGroup = 0;
+
+function hdrFilesLoaded(e) {
+  const files = Array.from(e.target.files).slice(0, 7);
+  if (!files.length) return;
+  hdrFiles = [];
+  hdrGroups = [];
+
+  const statusEl = document.getElementById('hdrUploadStatus');
+  if (statusEl) statusEl.textContent = `Loading ${files.length} photo${files.length>1?'s':''}…`;
+
+  let loaded = 0;
+  files.forEach((file, i) => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      hdrFiles[i] = {
+        file,
+        base64:    ev.target.result.split(',')[1],
+        type:      file.type,
+        filename:  file.name,
+        timestamp: null,
+        groupId:   null,
+      };
+      loaded++;
+      if (loaded === files.length) {
+        if (statusEl) statusEl.textContent =
+          `✓ ${files.length} photo${files.length>1?'s':''} loaded`;
+        document.getElementById('hdrGroupPanel').style.display = 'block';
+        // Auto-read EXIF and group
+        readEXIFAndGroup();
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function readEXIFAndGroup() {
+  showHDRStatus('Reading timestamps…', 'info');
+  try {
+    const resp = await fetch(`${BACKEND_URL}/read-exif`, {
+      method:  'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        images:    hdrFiles.map(f => `data:${f.type};base64,${f.base64}`),
+        filenames: hdrFiles.map(f => f.filename),
+      })
+    });
+    if (!resp.ok) throw new Error('EXIF read failed');
+    const data = await resp.json();
+    // Store timestamps
+    data.images.forEach(img => {
+      if (hdrFiles[img.index]) hdrFiles[img.index].timestamp = img.timestamp;
+    });
+    const hasExif = data.images.some(i => i.has_exif);
+    if (hasExif) {
+      autoGroupHDR();
+    } else {
+      // No EXIF — put all in one group
+      showHDRStatus('No timestamps found — all photos grouped together. Adjust manually if needed.', 'warn');
+      hdrGroups = [{ id:0, indices: hdrFiles.map((_,i)=>i) }];
+      renderHDRGroups();
+    }
+  } catch(err) {
+    // Fallback — group all together
+    hdrGroups = [{ id:0, indices: hdrFiles.map((_,i)=>i) }];
+    renderHDRGroups();
+    showHDRStatus('Could not read timestamps — all photos grouped. Adjust manually.', 'warn');
+  }
+}
+
+function updateHDRTimeWindow(val) {
+  document.getElementById('hdrTimeWindowVal').textContent = val + ' sec';
+  autoGroupHDR();
+}
+
+function autoGroupHDR() {
+  const windowSec = parseInt(document.getElementById('hdrTimeWindow')?.value || 5);
+  // Parse timestamps — format: "2024:05:13 14:32:01"
+  const times = hdrFiles.map(f => {
+    if (!f.timestamp) return null;
+    try {
+      const clean = f.timestamp.replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3');
+      return new Date(clean).getTime() / 1000;
+    } catch { return null; }
+  });
+
+  // Sort by timestamp
+  const indices = hdrFiles.map((_,i)=>i)
+    .filter(i => times[i] !== null)
+    .sort((a,b) => times[a] - times[b]);
+
+  const noTime = hdrFiles.map((_,i)=>i).filter(i => times[i] === null);
+
+  // Group by time window
+  hdrGroups = [];
+  let currentGroup = null;
+
+  indices.forEach(idx => {
+    if (!currentGroup) {
+      currentGroup = { id: hdrGroups.length, indices: [idx], startTime: times[idx] };
+    } else {
+      const gap = times[idx] - (times[currentGroup.indices[currentGroup.indices.length-1]] || 0);
+      if (gap <= windowSec) {
+        currentGroup.indices.push(idx);
+      } else {
+        hdrGroups.push(currentGroup);
+        currentGroup = { id: hdrGroups.length, indices: [idx], startTime: times[idx] };
+      }
+    }
+  });
+  if (currentGroup) hdrGroups.push(currentGroup);
+
+  // Photos without timestamps go ungrouped
+  renderHDRGroups(noTime);
+  showHDRStatus(
+    `Found ${hdrGroups.length} bracket group${hdrGroups.length>1?'s':''}${noTime.length?' · '+noTime.length+' ungrouped':''}`,
+    hdrGroups.length > 0 ? 'good' : 'warn'
+  );
+}
+
+function renderHDRGroups(ungrouped = []) {
+  const container = document.getElementById('hdrGroupsContainer');
+  if (!container) return;
+  container.innerHTML = '';
+
+  hdrGroups.forEach((group, gi) => {
+    const isSelected = gi === hdrSelectedGroup;
+    const div = document.createElement('div');
+    div.style.cssText = `
+      border:1px solid ${isSelected ? 'var(--acc)' : 'var(--border2)'};
+      border-radius:var(--r);padding:8px;margin-bottom:6px;
+      background:${isSelected ? 'rgba(79,142,247,.07)' : 'var(--bg3)'};
+      cursor:pointer;transition:all .15s
+    `;
+    div.onclick = () => { hdrSelectedGroup = gi; renderHDRGroups(ungrouped); };
+
+    const header = document.createElement('div');
+    header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:6px';
+    header.innerHTML = `
+      <span style="font-size:10.5px;font-weight:500;color:${isSelected?'var(--acc)':'var(--t1)'}">
+        ${isSelected?'▶ ':''}Group ${gi+1} — ${group.indices.length} exposure${group.indices.length>1?'s':''}
+      </span>
+      <span style="font-size:9.5px;color:var(--t2)">${group.indices.length}/7</span>
+    `;
+    div.appendChild(header);
+
+    // Thumbnail strip
+    const thumbs = document.createElement('div');
+    thumbs.style.cssText = 'display:flex;gap:4px;flex-wrap:wrap';
+    group.indices.forEach(idx => {
+      const f = hdrFiles[idx];
+      if (!f) return;
+      const thumb = document.createElement('div');
+      thumb.style.cssText = `
+        width:36px;height:36px;border-radius:3px;overflow:hidden;
+        border:1px solid var(--border2);position:relative;flex-shrink:0
+      `;
+      const img = document.createElement('img');
+      img.src = `data:${f.type};base64,${f.base64}`;
+      img.style.cssText = 'width:100%;height:100%;object-fit:cover';
+      const lbl = document.createElement('div');
+      lbl.style.cssText = `
+        position:absolute;bottom:0;left:0;right:0;
+        font-size:7px;font-family:var(--mono);
+        background:rgba(0,0,0,.6);color:#fff;
+        text-align:center;padding:1px
+      `;
+      lbl.textContent = `#${idx+1}`;
+      thumb.appendChild(img);
+      thumb.appendChild(lbl);
+      // Click to remove from group
+      thumb.title = `Click to remove ${f.filename} from group`;
+      thumb.onclick = ev => {
+        ev.stopPropagation();
+        group.indices = group.indices.filter(i => i !== idx);
+        hdrFiles[idx].groupId = null;
+        if (group.indices.length === 0) hdrGroups.splice(gi, 1);
+        renderHDRGroups([...ungrouped, idx]);
+      };
+      thumbs.appendChild(thumb);
+    });
+    div.appendChild(thumbs);
+    container.appendChild(div);
+  });
+
+  // Ungrouped photos
+  const ungroupedEl = document.getElementById('hdrUngrouped');
+  const manualPanel = document.getElementById('hdrManualPanel');
+  if (ungroupedEl && manualPanel) {
+    if (ungrouped.length > 0) {
+      manualPanel.style.display = 'block';
+      ungroupedEl.innerHTML = '';
+      ungrouped.forEach(idx => {
+        const f = hdrFiles[idx];
+        if (!f) return;
+        const thumb = document.createElement('div');
+        thumb.style.cssText = `
+          width:36px;height:36px;border-radius:3px;overflow:hidden;
+          border:1px solid var(--amb);cursor:pointer;position:relative
+        `;
+        thumb.title = `Click to add ${f.filename} to selected group`;
+        const img = document.createElement('img');
+        img.src = `data:${f.type};base64,${f.base64}`;
+        img.style.cssText = 'width:100%;height:100%;object-fit:cover';
+        thumb.appendChild(img);
+        thumb.onclick = () => {
+          if (hdrGroups[hdrSelectedGroup]) {
+            hdrGroups[hdrSelectedGroup].indices.push(idx);
+            const remaining = ungrouped.filter(i => i !== idx);
+            renderHDRGroups(remaining);
+          }
+        };
+        ungroupedEl.appendChild(thumb);
+      });
+    } else {
+      manualPanel.style.display = 'none';
+    }
+  }
+
+  // Show blend settings if at least one group has 2+ photos
+  const readyGroup = hdrGroups.find(g => g.indices.length >= 2);
+  const blendPanel = document.getElementById('hdrBlendSettings');
+  if (blendPanel) blendPanel.style.display = readyGroup ? 'block' : 'none';
+}
+
+function showHDRStatus(msg, type) {
+  const el = document.getElementById('hdrStatus');
+  if (!el) return;
+  el.style.display = 'block';
+  const colors = {
+    info:  {bg:'rgba(79,142,247,.08)',  border:'rgba(79,142,247,.25)',  color:'var(--t1)'},
+    good:  {bg:'rgba(56,193,114,.08)',  border:'rgba(56,193,114,.25)',  color:'var(--grn)'},
+    warn:  {bg:'rgba(240,160,48,.08)',  border:'rgba(240,160,48,.25)',  color:'var(--amb)'},
+    error: {bg:'rgba(232,81,74,.08)',   border:'rgba(232,81,74,.25)',   color:'var(--cor)'},
+  };
+  const c = colors[type] || colors.info;
+  el.style.background  = c.bg;
+  el.style.borderColor = c.border;
+  el.style.color       = c.color;
+  el.textContent       = msg;
+}
+
+async function runMultiHDRBlend() {
+  const group = hdrGroups[hdrSelectedGroup];
+  if (!group || group.indices.length < 2) {
+    showHDRStatus('Select a group with at least 2 exposures', 'warn'); return;
+  }
+
+  const btn     = document.getElementById('hdrBlendBtn');
+  const feather = document.getElementById('hdrFeather')?.value || 40;
+
+  btn.textContent = '◈ Blending…';
+  btn.disabled    = true;
+  showHDRStatus(`Blending ${group.indices.length} exposures…`, 'info');
+
+  try {
+    const images = group.indices.map(i =>
+      `data:${hdrFiles[i].type};base64,${hdrFiles[i].base64}`
+    );
+
+    const resp = await fetch(`${BACKEND_URL}/hdr-blend-multi`, {
+      method:  'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        images,
+        blend_strength: 90,
+        feather: parseFloat(feather),
+      })
+    });
+
+    if (!resp.ok) throw new Error('Backend error ' + resp.status);
+    const data = await resp.json();
+
+    if (data.success && data.image) {
+      snapshotForUndo();
+      await loadCorrectedImage(data.image);
+      showHDRStatus(
+        `✓ Blended ${data.images_used} exposures successfully`,
+        'good'
+      );
+    }
+  } catch(err) {
+    showHDRStatus('HDR blend failed — ' + (err.message || 'check connection'), 'error');
+  } finally {
+    btn.textContent = '◈ Blend Selected Group';
+    btn.disabled    = false;
+  }
+}
+
+// Keep old single-blend for backward compat
+function checkHDRReady() {}
+function hdrExteriorLoaded() {}
+async function runHDRBlend() { await runMultiHDRBlend(); }
 
 // ── WINDOW GLARE REMOVAL ──────────────────────────────────────
 function showGlareStatus(msg, type) {
